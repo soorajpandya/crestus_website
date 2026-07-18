@@ -30,6 +30,8 @@
 - Orders page with status badges (paid/pending/failed)
 - Google login via Emergent auth (header sign-in, dropdown with orders/logout)
 - Tested: iteration_1 — 15/15 backend, all frontend flows pass
+- Company pages (June 2026): Footer rebuilt with CRESTUS ECCOMMERCE PRIVATE LIMITED details (address, email, phone, CIN, GSTIN) + 3 link columns
+- New pages: New Arrivals, Best Sellers (badge-filtered), FAQ (accordion), Contact Us, Shipping/Refund/Cancellation Policy, Track Order (public GET /api/orders/track/{order_id}), About Us, Privacy Policy, Terms of Service, Cookie Preferences (localStorage toggles)
 
 ## Backlog
 - P0: Replace sample products with user's real catalog (user will provide)

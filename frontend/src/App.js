@@ -14,6 +14,12 @@ import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
 import AuthCallback from "@/pages/AuthCallback";
+import Collection from "@/pages/Collection";
+import FAQ from "@/pages/FAQ";
+import Contact from "@/pages/Contact";
+import TrackOrder from "@/pages/TrackOrder";
+import CookiePreferences from "@/pages/CookiePreferences";
+import { About, ShippingPolicy, RefundPolicy, CancellationPolicy, PrivacyPolicy, TermsOfService } from "@/pages/StaticPages";
 
 function LenisWrapper({ children }) {
   useEffect(() => {
@@ -50,6 +56,18 @@ function AppRouter() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/new-arrivals" element={<Collection type="new" />} />
+        <Route path="/best-sellers" element={<Collection type="best" />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/cancellation-policy" element={<CancellationPolicy />} />
+        <Route path="/track-order" element={<TrackOrder />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/cookie-preferences" element={<CookiePreferences />} />
       </Routes>
       <Footer />
     </>

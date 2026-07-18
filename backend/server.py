@@ -243,6 +243,20 @@ async def verify_payment(body: VerifyPaymentRequest, request: Request):
     return order
 
 
+@api_router.get("/orders/track/{order_id}")
+async def track_order(order_id: str):
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {
+        "order_id": order["order_id"],
+        "status": order["status"],
+        "created_at": order["created_at"],
+        "amount": order["amount"],
+        "items": [{"name": i["name"], "size": i["size"], "qty": i["qty"]} for i in order["items"]],
+    }
+
+
 @api_router.get("/orders")
 async def list_orders(request: Request):
     user = await get_current_user(request)
