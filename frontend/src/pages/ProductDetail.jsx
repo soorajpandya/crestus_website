@@ -54,10 +54,18 @@ export default function ProductDetail() {
           className="pt-2"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-maroon mb-4">
-            {product.category === "men" ? "Menswear" : "Womenswear"}
+            {product.category === "men" ? "Menswear" : "Womenswear"}{product.subcategory ? ` · ${product.subcategory}` : ""}
           </p>
           <h1 className="font-display font-semibold tracking-tighter text-4xl sm:text-5xl">{product.name}</h1>
-          <p data-testid="product-price" className="font-display text-2xl font-medium mt-4">{inr(product.price)}</p>
+          <p data-testid="product-price" className="mt-4 flex items-baseline gap-3">
+            <span className="font-display text-2xl font-medium">{inr(product.price)}</span>
+            {product.mrp > product.price && (
+              <>
+                <s className="text-zinc-400 text-base">{inr(product.mrp)}</s>
+                <span className="text-brand-magenta font-bold text-sm">{Math.round((1 - product.price / product.mrp) * 100)}% OFF</span>
+              </>
+            )}
+          </p>
           <p className="text-zinc-600 leading-relaxed mt-6 max-w-md text-sm md:text-base">{product.description}</p>
 
           <div className="mt-8 space-y-2 text-sm">

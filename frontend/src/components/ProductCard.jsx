@@ -27,9 +27,17 @@ export const ProductCard = ({ product, index = 0 }) => (
       <div className="mt-3 flex justify-between items-start gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold truncate group-hover:text-brand-magenta transition-colors">{product.name}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">{product.color}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{product.subcategory || product.color}</p>
         </div>
-        <p className="text-sm font-bold shrink-0">{inr(product.price)}</p>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-bold">{inr(product.price)}</p>
+          {product.mrp > product.price && (
+            <p className="text-xs">
+              <s className="text-zinc-400">{inr(product.mrp)}</s>{" "}
+              <span className="text-brand-magenta font-bold">-{Math.round((1 - product.price / product.mrp) * 100)}%</span>
+            </p>
+          )}
+        </div>
       </div>
     </Link>
   </motion.div>
