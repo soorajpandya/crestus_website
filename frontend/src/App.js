@@ -14,6 +14,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
 import AuthCallback from "@/pages/AuthCallback";
+import { track } from "@/lib/firebase";
 import Collection from "@/pages/Collection";
 import FAQ from "@/pages/FAQ";
 import Contact from "@/pages/Contact";
@@ -42,6 +43,9 @@ function LenisWrapper({ children }) {
 
 function AppRouter() {
   const location = useLocation();
+  useEffect(() => {
+    track("page_view", { page_path: location.pathname + location.search, page_title: document.title });
+  }, [location]);
   // Handle OAuth callback BEFORE normal routing (session_id arrives in URL fragment)
   if (location.hash?.includes("session_id=")) {
     return <AuthCallback />;

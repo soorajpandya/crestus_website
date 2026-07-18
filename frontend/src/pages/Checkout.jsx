@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "../lib/api";
+import { track } from "../lib/firebase";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -34,6 +35,11 @@ export default function Checkout() {
       return;
     }
     setPaying(true);
+    track("begin_checkout", {
+      currency: "INR",
+      value: total,
+      items: items.map((i) => ({ item_id: i.product_id, item_name: i.name, price: i.price, quantity: i.qty })),
+    });
     try {
       const ok = await loadRazorpay();
       if (!ok) throw new Error("Could not load Razorpay");
@@ -56,6 +62,12 @@ export default function Checkout() {
               razorpay_order_id: res.razorpay_order_id,
               razorpay_payment_id: res.razorpay_payment_id,
               razorpay_signature: res.razorpay_signature,
+            });
+            track("purchase", {
+              transaction_id: res.razorpay_payment_id,
+              currency: "INR",
+              value: total,
+              items: items.map((i) => ({ item_id: i.product_id, item_name: i.name, price: i.price, quantity: i.qty })),
             });
             clearCart();
             toast.success("Payment successful! Order placed.");

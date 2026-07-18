@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import api from "../lib/api";
+import { track } from "../lib/firebase";
 import { useCart } from "../context/CartContext";
 
 const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
@@ -16,7 +17,14 @@ export default function ProductDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    api.get(`/products/${id}`).then(({ data }) => setProduct(data)).catch(() => {});
+    api.get(`/products/${id}`).then(({ data }) => {
+      setProduct(data);
+      track("view_item", {
+        currency: "INR",
+        value: data.price,
+        items: [{ item_id: data.id, item_name: data.name, item_category: data.subcategory, price: data.price }],
+      });
+    }).catch(() => {});
   }, [id]);
 
   if (!product) {

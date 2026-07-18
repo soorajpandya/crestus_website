@@ -34,6 +34,8 @@
 - New pages: New Arrivals, Best Sellers (badge-filtered), FAQ (accordion), Contact Us, Shipping/Refund/Cancellation Policy, Track Order (public GET /api/orders/track/{order_id}), About Us, Privacy Policy, Terms of Service, Cookie Preferences (localStorage toggles)
 - Catalog update (June 2026): Removed all 16 original mock products (incl. City Trench Coat). Catalog is now 59 products sourced from pruyug.com + brandclothzy.com with subcategories (Shirts, T-Shirts, Jeans, Trousers, Track Pants, Vests, Shorts, Jackets, Ethnic Wear, Co-ord Sets, Sarees, Kurtis, Kurta Sets, Dupattas, Tops & Blouses, Lehengas, Dresses, Salwar Suits), MRP + discount % display, and subcategory filter chips on Shop. Seed data in /app/backend/products_seed.py. Pruyug-hosted images were inaccessible (host blocks external requests) so 13 equivalent product images were AI-generated and hosted on emergent static CDN; Meesho CDN images hotlink fine.
 
+- Firebase Analytics (June 2026): Full e-commerce tracking wired via firebase SDK (config in frontend/.env). Events: page_view (route changes), view_item, add_to_cart, remove_from_cart, begin_checkout, purchase. Helper at src/lib/firebase.js. DB migration to Firestore explicitly NOT done (working MongoDB store retained).
+
 ## Backlog
 - P0: Replace sample products with user's real catalog (user will provide)
 - P1: Product search; multiple images per product; inventory/stock tracking

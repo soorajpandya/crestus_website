@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { track } from "../lib/firebase";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "crestus_cart";
@@ -18,6 +19,11 @@ export function CartProvider({ children }) {
   }, [items]);
 
   const addItem = (product, size) => {
+    track("add_to_cart", {
+      currency: "INR",
+      value: product.price,
+      items: [{ item_id: product.id, item_name: product.name, item_category: product.subcategory, price: product.price, quantity: 1 }],
+    });
     setItems((prev) => {
       const key = `${product.id}-${size}`;
       const existing = prev.find((i) => i.key === key);
@@ -34,7 +40,17 @@ export function CartProvider({ children }) {
     setItems((prev) => prev.map((i) => (i.key === key ? { ...i, qty } : i)));
   };
 
-  const removeItem = (key) => setItems((prev) => prev.filter((i) => i.key !== key));
+  const removeItem = (key) => {
+    const item = items.find((i) => i.key === key);
+    if (item) {
+      track("remove_from_cart", {
+        currency: "INR",
+        value: item.price * item.qty,
+        items: [{ item_id: item.product_id, item_name: item.name, price: item.price, quantity: item.qty }],
+      });
+    }
+    setItems((prev) => prev.filter((i) => i.key !== key));
+  };
   const clearCart = () => setItems([]);
 
   const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
