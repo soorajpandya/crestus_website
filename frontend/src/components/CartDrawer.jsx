@@ -11,7 +11,7 @@ export const CartDrawer = () => {
 
   return (
     <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-      <SheetContent data-testid="cart-drawer" className="w-full sm:max-w-md flex flex-col bg-white">
+      <SheetContent data-testid="cart-drawer" aria-describedby={undefined} className="w-full sm:max-w-md flex flex-col bg-white">
         <SheetHeader>
           <SheetTitle className="font-display tracking-tight">Your Bag ({items.length})</SheetTitle>
         </SheetHeader>
