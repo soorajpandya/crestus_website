@@ -148,7 +148,7 @@ export default function Home() {
       {/* Manifesto */}
       <section className="bg-zinc-50 border-y border-zinc-100">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 py-28">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-maroon mb-14">The Veloura Manifesto</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-maroon mb-14">The Crestus Manifesto</p>
           <div className="space-y-20">
             {CHAPTERS.map((ch, i) => (
               <motion.div

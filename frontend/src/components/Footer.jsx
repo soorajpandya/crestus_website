@@ -6,7 +6,7 @@ export const Footer = () => (
       <div className="flex flex-col md:flex-row justify-between gap-12">
         <div>
           <p className="font-display font-semibold text-3xl tracking-tighter">
-            VELOURA<span className="text-brand-magenta">.</span>
+            CRESTUS<span className="text-brand-magenta">.</span>
           </p>
           <p className="text-zinc-400 text-sm mt-4 max-w-xs leading-relaxed">
             Premium clothing for men and women. Cut with intent, worn for years.
@@ -26,7 +26,7 @@ export const Footer = () => (
         </div>
       </div>
       <div className="border-t border-zinc-800 mt-16 pt-6 flex justify-between text-xs text-zinc-500">
-        <p>© 2026 Veloura. All rights reserved.</p>
+        <p>© 2026 Crestus. All rights reserved.</p>
         <p>Made for the moment.</p>
       </div>
     </div>

@@ -15,7 +15,7 @@ export const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 border-b border-zinc-100">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
         <Link to="/" data-testid="header-logo" className="font-display font-semibold text-xl tracking-tighter">
-          VELOURA<span className="text-brand-magenta">.</span>
+          CRESTUS<span className="text-brand-magenta">.</span>
         </Link>
         <nav className="flex items-center gap-6 sm:gap-8">
           <Link to="/shop?c=men" data-testid="nav-men" className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-700 hover:text-brand-magenta transition-colors">

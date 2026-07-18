@@ -1,4 +1,4 @@
-# Veloura — PRD
+# Crestus (formerly Veloura) — PRD
 
 ## Original Problem Statement
 "Build Me A website for Mens and Women Clothing store. not for the children or kids."

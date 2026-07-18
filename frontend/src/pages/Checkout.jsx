@@ -45,7 +45,7 @@ export default function Checkout() {
         key: data.key_id,
         amount: data.amount,
         currency: data.currency,
-        name: "Veloura",
+        name: "Crestus",
         description: "Clothing order",
         order_id: data.razorpay_order_id,
         prefill: { name: address.name || data.name, email: data.email, contact: address.phone },
