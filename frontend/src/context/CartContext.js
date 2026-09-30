@@ -1,21 +1,108 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { track } from "../lib/firebase";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { track, db } from "../lib/firebase";
+import { useAuth } from "./AuthContext";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const CartContext = createContext(null);
-const STORAGE_KEY = "crestus_cart";
+
+const getCartStorageKey = (uid) => (uid ? `crestus_cart_${uid}` : "crestus_cart_guest");
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch {
-      return [];
-    }
-  });
+  const { user } = useAuth();
+  const [items, setItems] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const currentUidRef = useRef(user?.uid || null);
+  const isInitialLoadRef = useRef(true);
 
+  // Load cart user-wise whenever user state changes (login, logout, account switch)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    const currentUid = user?.uid || null;
+    currentUidRef.current = currentUid;
+    const storageKey = getCartStorageKey(currentUid);
+
+    let localItems = [];
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        localItems = JSON.parse(stored) || [];
+      }
+    } catch {
+      localItems = [];
+    }
+
+    // If user just logged in and had guest items, merge them into the user's cart
+    if (currentUid) {
+      try {
+        const guestItemsRaw = localStorage.getItem("crestus_cart_guest") || localStorage.getItem("crestus_cart");
+        if (guestItemsRaw) {
+          const guestItems = JSON.parse(guestItemsRaw);
+          if (Array.isArray(guestItems) && guestItems.length > 0) {
+            const mergedMap = new Map();
+            localItems.forEach((i) => mergedMap.set(i.key, i));
+            guestItems.forEach((gi) => {
+              if (mergedMap.has(gi.key)) {
+                const ex = mergedMap.get(gi.key);
+                mergedMap.set(gi.key, { ...ex, qty: ex.qty + gi.qty });
+              } else {
+                mergedMap.set(gi.key, gi);
+              }
+            });
+            localItems = Array.from(mergedMap.values());
+            localStorage.setItem(storageKey, JSON.stringify(localItems));
+            localStorage.removeItem("crestus_cart_guest");
+            localStorage.removeItem("crestus_cart"); // clean up legacy global cart
+          }
+        }
+      } catch {}
+    }
+
+    setItems(localItems);
+    isInitialLoadRef.current = false;
+
+    // Optional Firestore cloud sync for logged-in user (silent fallback if rules/db not setup)
+    if (currentUid && db) {
+      getDoc(doc(db, "carts", currentUid))
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            const cloudData = docSnap.data();
+            if (Array.isArray(cloudData.items) && cloudData.items.length > 0) {
+              setItems((prev) => {
+                // If local items already exist, preserve; otherwise use cloud items
+                if (prev.length === 0) {
+                  localStorage.setItem(storageKey, JSON.stringify(cloudData.items));
+                  return cloudData.items;
+                }
+                return prev;
+              });
+            }
+          }
+        })
+        .catch(() => {
+          // Non-blocking: permissions or offline mode in Firebase
+        });
+    }
+  }, [user?.uid]);
+
+  // Persist items user-wise whenever cart items update
+  useEffect(() => {
+    if (isInitialLoadRef.current) return;
+    const currentUid = currentUidRef.current;
+    const storageKey = getCartStorageKey(currentUid);
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(items));
+    } catch {}
+
+    // Cloud backup in Firestore if user is signed in
+    if (currentUid && db) {
+      try {
+        setDoc(doc(db, "carts", currentUid), {
+          items,
+          updated_at: new Date().toISOString(),
+          user_id: currentUid,
+        }, { merge: true }).catch(() => {});
+      } catch {}
+    }
   }, [items]);
 
   const addItem = (product, size) => {
@@ -51,7 +138,19 @@ export function CartProvider({ children }) {
     }
     setItems((prev) => prev.filter((i) => i.key !== key));
   };
-  const clearCart = () => setItems([]);
+
+  const clearCart = () => {
+    setItems([]);
+    const storageKey = getCartStorageKey(currentUidRef.current);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
+    if (currentUidRef.current && db) {
+      try {
+        setDoc(doc(db, "carts", currentUidRef.current), { items: [], updated_at: new Date().toISOString() }, { merge: true }).catch(() => {});
+      } catch {}
+    }
+  };
 
   const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const count = items.reduce((sum, i) => sum + i.qty, 0);

@@ -84,8 +84,15 @@ const mockAdapter = async (config) => {
   // GET /orders
   if (path === "/orders") {
     let orders = [];
+    const userId = config.params?.user_id || searchParams.get("user_id");
+    const userEmail = (config.params?.email || searchParams.get("email") || "").toLowerCase();
     try {
-      orders = JSON.parse(localStorage.getItem("crestus_orders") || "[]");
+      if (userId) {
+        orders = JSON.parse(localStorage.getItem(`crestus_orders_${userId}`) || "[]");
+      } else if (userEmail) {
+        const all = JSON.parse(localStorage.getItem("crestus_orders") || "[]");
+        orders = all.filter((o) => (o.address?.email || "").toLowerCase() === userEmail);
+      }
     } catch {}
     return {
       data: orders,

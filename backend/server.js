@@ -116,7 +116,7 @@ app.get("/api/products/:id", (req, res) => {
 // Create Cashfree Order
 app.post("/api/orders/create", async (req, res) => {
   try {
-    const { items, address, amount } = req.body;
+    const { items, address, amount, user_id } = req.body;
 
     if (!address) {
       return res.status(400).json({ detail: "Delivery address is required" });
@@ -170,10 +170,12 @@ app.post("/api/orders/create", async (req, res) => {
     const response = await cashfree.PGCreateOrder(request);
     const orderData = response.data;
 
-    // Record order locally
+    // Record order locally scoped to user
     orders.unshift({
       order_id: orderId,
       cf_order_id: orderData.cf_order_id,
+      user_id: user_id || null,
+      customer_email: email,
       amount: total,
       status: "pending",
       items: items || [],
@@ -248,7 +250,19 @@ app.post("/webhook", (req, res) => {
 });
 
 app.get("/api/orders", (req, res) => {
-  res.json(orders);
+  const { user_id, email } = req.query;
+  if (!user_id && !email) {
+    // Return empty list to prevent exposing all customer orders
+    return res.json([]);
+  }
+  const filtered = orders.filter((o) => {
+    const matchUid = user_id && o.user_id && String(o.user_id) === String(user_id);
+    const targetEmail = (email || "").toLowerCase();
+    const orderEmail = (o.customer_email || o.address?.email || "").toLowerCase();
+    const matchEmail = Boolean(targetEmail && orderEmail && orderEmail === targetEmail);
+    return Boolean(matchUid || matchEmail);
+  });
+  res.json(filtered);
 });
 
 app.get("/api/orders/track/:order_id", (req, res) => {

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "../lib/api";
 import { track } from "../lib/firebase";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -101,10 +102,21 @@ export function validateAddress(address) {
 
 export default function Checkout() {
   const { items, total, clearCart } = useCart();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
   const [address, setAddress] = useState(EMPTY_ADDRESS);
   const [errors, setErrors] = useState({});
   const [paying, setPaying] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setAddress((prev) => ({
+        ...prev,
+        name: prev.name || user.name || user.displayName || "",
+        email: prev.email || user.email || "",
+      }));
+    }
+  }, [user]);
 
   const handleChange = (k) => (e) => {
     let val = e.target.value;
@@ -141,11 +153,12 @@ export default function Checkout() {
         throw new Error("Could not load Cashfree Checkout SDK");
       }
 
-      // Create order with Cashfree SDK backend endpoint using validated address
+      // Create order with Cashfree SDK backend endpoint using validated address and user_id
       const { data } = await api.post("/orders/create", {
         items: items.map((i) => ({ product_id: i.product_id, size: i.size, qty: i.qty, price: i.price, name: i.name })),
         amount: total,
         address: cleanedAddress,
+        user_id: user?.uid || null,
       });
 
       if (!data.payment_session_id) {
@@ -179,19 +192,21 @@ export default function Checkout() {
             // Non-blocking verify
           }
 
-          // Save order to local order history
+          // Save order to user-scoped local order history
           try {
-            const existingOrders = JSON.parse(localStorage.getItem("crestus_orders") || "[]");
+            const userOrdersKey = user?.uid ? `crestus_orders_${user.uid}` : "crestus_orders_guest";
+            const existingOrders = JSON.parse(localStorage.getItem(userOrdersKey) || "[]");
             const newOrder = {
               order_id: data.order_id,
               cf_order_id: data.cf_order_id,
+              user_id: user?.uid || null,
               amount: total,
               status: "paid",
               items,
-              address,
+              address: cleanedAddress,
               created_at: new Date().toISOString(),
             };
-            localStorage.setItem("crestus_orders", JSON.stringify([newOrder, ...existingOrders]));
+            localStorage.setItem(userOrdersKey, JSON.stringify([newOrder, ...existingOrders]));
           } catch {}
 
           track("purchase", {
@@ -212,8 +227,6 @@ export default function Checkout() {
       setPaying(false);
     }
   };
-
-
 
   if (items.length === 0) {
     return (
@@ -242,7 +255,34 @@ export default function Checkout() {
 
   return (
     <div data-testid="checkout-page" className="max-w-5xl mx-auto px-6 lg:px-10 pt-28 pb-24 min-h-screen">
-      <h1 className="font-display font-semibold tracking-tighter text-4xl sm:text-5xl mb-12">Checkout</h1>
+      <h1 className="font-display font-semibold tracking-tighter text-4xl sm:text-5xl mb-6">Checkout</h1>
+
+      {user ? (
+        <div className="mb-8 flex items-center gap-3 p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs text-zinc-700">
+          {user.picture ? (
+            <img src={user.picture} alt={user.name} className="w-5 h-5 rounded-full object-cover" />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-zinc-200 flex items-center justify-center font-bold text-[10px]">
+              {user.name?.[0] || "U"}
+            </div>
+          )}
+          <span>
+            Signed in as <strong>{user.name}</strong> ({user.email}). This order will be linked to your account.
+          </span>
+        </div>
+      ) : (
+        <div className="mb-8 flex items-center justify-between p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-xl text-xs text-amber-900">
+          <span>Sign in with Google to automatically track this order in your account.</span>
+          <button
+            type="button"
+            onClick={login}
+            className="font-bold text-amber-900 underline hover:text-brand-magenta transition-colors shrink-0 ml-3"
+          >
+            Sign in with Google →
+          </button>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-5 gap-12">
         <div className="md:col-span-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-5">Delivery address</p>
