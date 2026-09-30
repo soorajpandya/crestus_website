@@ -1,0 +1,16 @@
+{
+  "name": "crestus-backend",
+  "version": "1.0.0",
+  "description": "Crestus e-commerce backend with Cashfree Payment Gateway",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cashfree-pg": "^6.0.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.22.3"
+  }
+}
