@@ -110,6 +110,14 @@ async def get_current_user(request: Request) -> dict:
     return user
 
 
+async def get_optional_user(request: Request) -> Optional[dict]:
+    """Returns the authenticated user or None for guest checkout."""
+    try:
+        return await get_current_user(request)
+    except HTTPException:
+        return None
+
+
 # ---------- Auth routes ----------
 @api_router.post("/auth/session")
 async def create_session(body: SessionRequest, response: Response):
@@ -178,7 +186,8 @@ async def get_product(product_id: str):
 # ---------- Order / payment routes (Cashfree) ----------
 @api_router.post("/orders/create")
 async def create_order(body: CreateOrderRequest, request: Request):
-    user = await get_current_user(request)
+    user = await get_optional_user(request)
+    user_id = user["user_id"] if user else f"guest_{uuid.uuid4().hex[:12]}"
     if not body.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
 
@@ -211,8 +220,8 @@ async def create_order(body: CreateOrderRequest, request: Request):
         "customer_details": {
             "customer_id": clean_phone or f"cust_{uuid.uuid4().hex[:8]}",
             "customer_phone": clean_phone or "9999999999",
-            "customer_name": body.address.name or user.get("name", "Customer"),
-            "customer_email": body.address.email or user.get("email", "customer@crestus.in"),
+            "customer_name": body.address.name or (user.get("name", "Customer") if user else "Customer"),
+            "customer_email": body.address.email or (user.get("email", "customer@crestus.in") if user else "customer@crestus.in"),
         },
         "order_meta": {
             "return_url": "https://crestus.in/orders?order_id={order_id}",
@@ -242,7 +251,7 @@ async def create_order(body: CreateOrderRequest, request: Request):
     # Store order in MongoDB
     await db.orders.insert_one({
         "order_id": order_id,
-        "user_id": user["user_id"],
+        "user_id": user_id,
         "cf_order_id": cf_data.get("cf_order_id"),
         "items": items,
         "address": body.address.model_dump(),
@@ -263,7 +272,7 @@ async def create_order(body: CreateOrderRequest, request: Request):
 
 @api_router.post("/orders/verify")
 async def verify_payment(body: VerifyPaymentRequest, request: Request):
-    user = await get_current_user(request)
+    user = await get_optional_user(request)
     try:
         async with httpx.AsyncClient() as hc:
             cf_response = await hc.get(
@@ -279,8 +288,12 @@ async def verify_payment(body: VerifyPaymentRequest, request: Request):
     order_status = cf_data.get("order_status", "").upper()
     db_status = "paid" if order_status == "PAID" else order_status.lower()
 
+    query = {"order_id": body.order_id}
+    if user:
+        query["user_id"] = user["user_id"]
+
     await db.orders.update_one(
-        {"order_id": body.order_id, "user_id": user["user_id"]},
+        query,
         {"$set": {
             "status": db_status,
             "paid_at": datetime.now(timezone.utc).isoformat() if db_status == "paid" else None,
@@ -288,7 +301,7 @@ async def verify_payment(body: VerifyPaymentRequest, request: Request):
     )
 
     order = await db.orders.find_one(
-        {"order_id": body.order_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"order_id": body.order_id}, {"_id": 0}
     )
     return {
         "order_id": body.order_id,
