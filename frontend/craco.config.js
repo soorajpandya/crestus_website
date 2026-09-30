@@ -137,13 +137,29 @@ webpackConfig.devServer = (devServerConfig) => {
             );
           const orderId = `ord_${Date.now()}`;
 
+          const cleanPhone = String(address?.phone || "").replace(/\D/g, "").slice(-10);
+          if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+            return res.status(400).json({ detail: "Please provide a valid 10-digit mobile number starting with 6, 7, 8, or 9" });
+          }
+
+          const email = String(address?.email || "").trim().toLowerCase();
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!email || !emailRegex.test(email)) {
+            return res.status(400).json({ detail: "Please provide a valid email address" });
+          }
+
+          const name = String(address?.name || "").trim();
+          if (!name || name.length < 2) {
+            return res.status(400).json({ detail: "Please provide your full name (at least 2 letters)" });
+          }
+
           const cfOrder = await createCashfreeOrder({
             orderId,
             orderAmount: total,
-            customerId: address?.phone || `cust_${Date.now()}`,
-            customerPhone: address?.phone || "9999999999",
-            customerName: address?.name || "Customer",
-            customerEmail: address?.email || "customer@crestus.in",
+            customerId: cleanPhone,
+            customerPhone: cleanPhone,
+            customerName: name,
+            customerEmail: email,
             returnUrl: "https://crestus.in/orders?order_id={order_id}",
           });
 

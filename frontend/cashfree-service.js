@@ -21,8 +21,8 @@ async function createCashfreeOrder({
   customerEmail,
   returnUrl,
 }) {
-  const cleanPhone = (customerPhone || "9999999999").replace(/[^0-9]/g, "").slice(-10);
-  const cleanCustomerId = (customerId || `cust_${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const cleanPhone = (customerPhone || "").replace(/\D/g, "").slice(-10);
+  const cleanCustomerId = (customerId || cleanPhone || `cust_${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, "_");
 
   const request = {
     order_id: orderId || `ord_${Date.now()}`,
@@ -30,9 +30,9 @@ async function createCashfreeOrder({
     order_currency: "INR",
     customer_details: {
       customer_id: cleanCustomerId,
-      customer_phone: cleanPhone || "9999999999",
-      customer_name: customerName || "Customer",
-      customer_email: customerEmail || "customer@crestus.in",
+      customer_phone: cleanPhone,
+      customer_name: (customerName || "").trim() || "Customer",
+      customer_email: (customerEmail || "").trim().toLowerCase(),
     },
     order_meta: {
       return_url:

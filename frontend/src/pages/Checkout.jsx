@@ -20,19 +20,114 @@ const loadCashfree = () =>
 
 const EMPTY_ADDRESS = { name: "", email: "", phone: "", line1: "", city: "", state: "", pincode: "" };
 
+export function validateAddress(address) {
+  const errors = {};
+
+  // Full name
+  const name = (address.name || "").trim();
+  if (!name) {
+    errors.name = "Full name is required";
+  } else if (name.length < 2) {
+    errors.name = "Please enter your full name (at least 2 letters)";
+  } else if (!/^[a-zA-Z\s'.]+$/.test(name)) {
+    errors.name = "Name should contain only letters";
+  }
+
+  // Email
+  const email = (address.email || "").trim().toLowerCase();
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!email) {
+    errors.email = "Email address is required";
+  } else if (!emailRegex.test(email)) {
+    errors.email = "Please enter a valid email address (e.g. name@domain.com)";
+  }
+
+  // Phone: Indian 10 digits starting with 6, 7, 8, 9
+  const phone = (address.phone || "").trim().replace(/\D/g, "").slice(-10);
+  if (!phone) {
+    errors.phone = "Phone number is required";
+  } else if (phone.length !== 10) {
+    errors.phone = "Please enter a complete 10-digit phone number";
+  } else if (!/^[6-9]\d{9}$/.test(phone)) {
+    errors.phone = "Mobile number must start with 6, 7, 8, or 9";
+  }
+
+  // Delivery Address
+  const line1 = (address.line1 || "").trim();
+  if (!line1) {
+    errors.line1 = "Address is required";
+  } else if (line1.length < 5) {
+    errors.line1 = "Please enter a complete address (flat/house no., street, area)";
+  }
+
+  // City
+  const city = (address.city || "").trim();
+  if (!city) {
+    errors.city = "City is required";
+  } else if (city.length < 2) {
+    errors.city = "Please enter a valid city name";
+  }
+
+  // State
+  const state = (address.state || "").trim();
+  if (!state) {
+    errors.state = "State is required";
+  } else if (state.length < 2) {
+    errors.state = "Please enter a valid state";
+  }
+
+  // Pincode: exactly 6 digits
+  const pincode = (address.pincode || "").trim().replace(/\D/g, "");
+  if (!pincode) {
+    errors.pincode = "Pincode is required";
+  } else if (!/^\d{6}$/.test(pincode)) {
+    errors.pincode = "Please enter a valid 6-digit postal pincode";
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+    cleanedAddress: {
+      name,
+      email,
+      phone,
+      line1,
+      city,
+      state,
+      pincode,
+    },
+  };
+}
+
 export default function Checkout() {
   const { items, total, clearCart } = useCart();
   const navigate = useNavigate();
   const [address, setAddress] = useState(EMPTY_ADDRESS);
+  const [errors, setErrors] = useState({});
   const [paying, setPaying] = useState(false);
 
-  const set = (k) => (e) => setAddress((a) => ({ ...a, [k]: e.target.value }));
+  const handleChange = (k) => (e) => {
+    let val = e.target.value;
+    if (k === "phone") {
+      val = val.replace(/\D/g, "").slice(0, 10);
+    } else if (k === "pincode") {
+      val = val.replace(/\D/g, "").slice(0, 6);
+    }
+    setAddress((a) => ({ ...a, [k]: val }));
+    if (errors[k]) {
+      setErrors((prev) => ({ ...prev, [k]: null }));
+    }
+  };
 
   const handlePay = async () => {
-    if (Object.values(address).some((v) => !v.trim())) {
-      toast.error("Please fill in all address fields");
+    const { isValid, errors: validationErrors, cleanedAddress } = validateAddress(address);
+    if (!isValid) {
+      setErrors(validationErrors);
+      const firstError = Object.values(validationErrors)[0];
+      toast.error(firstError || "Please fill in all address fields correctly");
       return;
     }
+    setErrors({});
     setPaying(true);
     track("begin_checkout", {
       currency: "INR",
@@ -46,14 +141,11 @@ export default function Checkout() {
         throw new Error("Could not load Cashfree Checkout SDK");
       }
 
-      // Create order with Cashfree SDK backend endpoint
+      // Create order with Cashfree SDK backend endpoint using validated address
       const { data } = await api.post("/orders/create", {
         items: items.map((i) => ({ product_id: i.product_id, size: i.size, qty: i.qty, price: i.price, name: i.name })),
         amount: total,
-        address: {
-          ...address,
-          email: address.email || "customer@crestus.in",
-        },
+        address: cleanedAddress,
       });
 
       if (!data.payment_session_id) {
@@ -155,17 +247,28 @@ export default function Checkout() {
         <div className="md:col-span-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-5">Delivery address</p>
           <div className="grid grid-cols-2 gap-4">
-            {fields.map((f) => (
-              <input
-                key={f.key}
-                type={f.type || "text"}
-                data-testid={`address-${f.key}`}
-                placeholder={f.label}
-                value={address[f.key]}
-                onChange={set(f.key)}
-                className={`${f.span ? "col-span-2" : ""} border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-magenta transition-colors`}
-              />
-            ))}
+            {fields.map((f) => {
+              const hasError = Boolean(errors[f.key]);
+              return (
+                <div key={f.key} className={f.span ? "col-span-2" : ""}>
+                  <input
+                    type={f.type || "text"}
+                    data-testid={`address-${f.key}`}
+                    placeholder={f.label}
+                    value={address[f.key]}
+                    onChange={handleChange(f.key)}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors ${
+                      hasError
+                        ? "border-rose-400 bg-rose-50/20 focus:border-rose-500 text-zinc-900"
+                        : "border-zinc-200 focus:border-brand-magenta text-zinc-900"
+                    }`}
+                  />
+                  {hasError && (
+                    <p className="text-[12px] text-rose-500 mt-1 ml-1 font-medium">{errors[f.key]}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="md:col-span-2">

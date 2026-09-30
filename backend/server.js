@@ -117,21 +117,50 @@ app.get("/api/products/:id", (req, res) => {
 app.post("/api/orders/create", async (req, res) => {
   try {
     const { items, address, amount } = req.body;
+
+    if (!address) {
+      return res.status(400).json({ detail: "Delivery address is required" });
+    }
+
+    // Validate and clean phone
+    const cleanPhone = String(address.phone || "").replace(/\D/g, "").slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ detail: "Please provide a valid 10-digit mobile number starting with 6, 7, 8, or 9" });
+    }
+
+    // Validate and clean email
+    const email = String(address.email || "").trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ detail: "Please provide a valid email address" });
+    }
+
+    // Validate name
+    const name = String(address.name || "").trim();
+    if (!name || name.length < 2) {
+      return res.status(400).json({ detail: "Please provide your full name (at least 2 letters)" });
+    }
+
+    // Validate pincode
+    const pincode = String(address.pincode || "").trim().replace(/\D/g, "");
+    if (!pincode || pincode.length !== 6) {
+      return res.status(400).json({ detail: "Please provide a valid 6-digit postal pincode" });
+    }
+
     const total =
       amount ||
       (items || []).reduce((sum, it) => sum + (it.price || 0) * (it.qty || 1), 0);
     const orderId = `ord_${Date.now()}`;
-    const cleanPhone = (address?.phone || "9999999999").replace(/[^0-9]/g, "").slice(-10);
 
     const request = {
       order_id: orderId,
       order_amount: Number(total),
       order_currency: "INR",
       customer_details: {
-        customer_id: cleanPhone || `cust_${Date.now()}`,
-        customer_phone: cleanPhone || "9999999999",
-        customer_name: address?.name || "Customer",
-        customer_email: address?.email || "customer@crestus.in",
+        customer_id: cleanPhone,
+        customer_phone: cleanPhone,
+        customer_name: name,
+        customer_email: email,
       },
       order_meta: {
         return_url: "https://crestus.in/orders?order_id={order_id}",
