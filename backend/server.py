@@ -6,10 +6,9 @@ import os
 import logging
 import uuid
 import httpx
-import razorpay
 from pathlib import Path
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
@@ -19,12 +18,32 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-rzp_client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
+# Cashfree Configuration
+CASHFREE_APP_ID = os.environ.get('CASHFREE_APP_ID', '')
+CASHFREE_SECRET_KEY = os.environ.get('CASHFREE_SECRET_KEY', '')
+CASHFREE_ENV = os.environ.get('CASHFREE_ENV', 'PRODUCTION').upper()
+CASHFREE_BASE_URL = (
+    "https://sandbox.cashfree.com/pg" if CASHFREE_ENV == "SANDBOX"
+    else "https://api.cashfree.com/pg"
+)
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+# ---------- Cashfree helpers ----------
+def cashfree_headers():
+    return {
+        "Content-Type": "application/json",
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY,
+        "x-api-version": "2023-08-01",
+    }
 
 
 # ---------- Models ----------
@@ -41,6 +60,8 @@ class OrderItemIn(BaseModel):
     product_id: str
     size: str
     qty: int
+    price: Optional[float] = None
+    name: Optional[str] = None
 
 class Address(BaseModel):
     name: str
@@ -49,15 +70,16 @@ class Address(BaseModel):
     city: str
     state: str
     pincode: str
+    email: Optional[str] = None
 
 class CreateOrderRequest(BaseModel):
     items: List[OrderItemIn]
     address: Address
+    amount: Optional[float] = None
 
 class VerifyPaymentRequest(BaseModel):
-    razorpay_order_id: str
-    razorpay_payment_id: str
-    razorpay_signature: str
+    order_id: str
+    cf_order_id: Optional[str] = None
 
 
 from products_seed import SAMPLE_PRODUCTS
@@ -153,12 +175,13 @@ async def get_product(product_id: str):
     return product
 
 
-# ---------- Order / payment routes ----------
+# ---------- Order / payment routes (Cashfree) ----------
 @api_router.post("/orders/create")
 async def create_order(body: CreateOrderRequest, request: Request):
     user = await get_current_user(request)
     if not body.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
+
     items = []
     total = 0
     for it in body.items:
@@ -166,39 +189,75 @@ async def create_order(body: CreateOrderRequest, request: Request):
         if not product:
             raise HTTPException(status_code=400, detail=f"Product {it.product_id} not found")
         qty = max(1, it.qty)
+        price = product["price"]
         items.append({
-            "product_id": product["id"], "name": product["name"], "image": product["image"],
-            "price": product["price"], "size": it.size, "qty": qty,
+            "product_id": product["id"], "name": product["name"], "image": product.get("image", ""),
+            "price": price, "size": it.size, "qty": qty,
         })
-        total += product["price"] * qty
+        total += price * qty
+
+    # Use amount from frontend if provided (for consistency)
+    if body.amount and body.amount > 0:
+        total = body.amount
+
     order_id = f"ord_{uuid.uuid4().hex[:12]}"
+    clean_phone = ''.join(c for c in (body.address.phone or "9999999999") if c.isdigit())[-10:]
+
+    # Create Cashfree order via REST API
+    cashfree_payload = {
+        "order_id": order_id,
+        "order_amount": float(total),
+        "order_currency": "INR",
+        "customer_details": {
+            "customer_id": clean_phone or f"cust_{uuid.uuid4().hex[:8]}",
+            "customer_phone": clean_phone or "9999999999",
+            "customer_name": body.address.name or user.get("name", "Customer"),
+            "customer_email": body.address.email or user.get("email", "customer@crestus.in"),
+        },
+        "order_meta": {
+            "return_url": "https://crestus.in/orders?order_id={order_id}",
+        },
+    }
+
     try:
-        rzp_order = rzp_client.order.create({
-            "amount": total * 100, "currency": "INR",
-            "receipt": order_id[:40], "payment_capture": 1,
-        })
-    except Exception as e:
-        logger.error(f"Razorpay order creation failed: {e}")
+        async with httpx.AsyncClient() as hc:
+            cf_response = await hc.post(
+                f"{CASHFREE_BASE_URL}/orders",
+                json=cashfree_payload,
+                headers=cashfree_headers(),
+                timeout=30.0,
+            )
+        cf_data = cf_response.json()
+
+        if cf_response.status_code not in (200, 201):
+            logger.error(f"Cashfree order creation failed: {cf_data}")
+            raise HTTPException(
+                status_code=502,
+                detail=cf_data.get("message", "Payment gateway error. Please try again.")
+            )
+    except httpx.HTTPError as e:
+        logger.error(f"Cashfree request error: {e}")
         raise HTTPException(status_code=502, detail="Payment gateway error. Please try again.")
+
+    # Store order in MongoDB
     await db.orders.insert_one({
         "order_id": order_id,
         "user_id": user["user_id"],
+        "cf_order_id": cf_data.get("cf_order_id"),
         "items": items,
         "address": body.address.model_dump(),
         "amount": total,
         "currency": "INR",
-        "razorpay_order_id": rzp_order["id"],
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
+
     return {
         "order_id": order_id,
-        "razorpay_order_id": rzp_order["id"],
-        "amount": total * 100,
-        "currency": "INR",
-        "key_id": os.environ['RAZORPAY_KEY_ID'],
-        "name": user["name"],
-        "email": user["email"],
+        "cf_order_id": cf_data.get("cf_order_id"),
+        "payment_session_id": cf_data.get("payment_session_id"),
+        "amount": total,
+        "environment": "sandbox" if CASHFREE_ENV == "SANDBOX" else "production",
     }
 
 
@@ -206,23 +265,37 @@ async def create_order(body: CreateOrderRequest, request: Request):
 async def verify_payment(body: VerifyPaymentRequest, request: Request):
     user = await get_current_user(request)
     try:
-        rzp_client.utility.verify_payment_signature({
-            "razorpay_order_id": body.razorpay_order_id,
-            "razorpay_payment_id": body.razorpay_payment_id,
-            "razorpay_signature": body.razorpay_signature,
-        })
-    except Exception:
-        await db.orders.update_one(
-            {"razorpay_order_id": body.razorpay_order_id, "user_id": user["user_id"]},
-            {"$set": {"status": "failed"}},
-        )
-        raise HTTPException(status_code=400, detail="Payment verification failed")
+        async with httpx.AsyncClient() as hc:
+            cf_response = await hc.get(
+                f"{CASHFREE_BASE_URL}/orders/{body.order_id}",
+                headers=cashfree_headers(),
+                timeout=30.0,
+            )
+        cf_data = cf_response.json()
+    except Exception as e:
+        logger.error(f"Cashfree verify error: {e}")
+        raise HTTPException(status_code=502, detail="Could not verify payment")
+
+    order_status = cf_data.get("order_status", "").upper()
+    db_status = "paid" if order_status == "PAID" else order_status.lower()
+
     await db.orders.update_one(
-        {"razorpay_order_id": body.razorpay_order_id, "user_id": user["user_id"]},
-        {"$set": {"status": "paid", "razorpay_payment_id": body.razorpay_payment_id, "paid_at": datetime.now(timezone.utc).isoformat()}},
+        {"order_id": body.order_id, "user_id": user["user_id"]},
+        {"$set": {
+            "status": db_status,
+            "paid_at": datetime.now(timezone.utc).isoformat() if db_status == "paid" else None,
+        }},
     )
-    order = await db.orders.find_one({"razorpay_order_id": body.razorpay_order_id, "user_id": user["user_id"]}, {"_id": 0})
-    return order
+
+    order = await db.orders.find_one(
+        {"order_id": body.order_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    return {
+        "order_id": body.order_id,
+        "status": order_status,
+        "paid": order_status == "PAID",
+        "data": cf_data,
+    }
 
 
 @api_router.get("/orders/track/{order_id}")
@@ -245,18 +318,37 @@ async def list_orders(request: Request):
     return await db.orders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
 
 
+# ---------- Health check ----------
+@api_router.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "gateway": "cashfree",
+        "mode": "sandbox" if CASHFREE_ENV == "SANDBOX" else "production",
+    }
+
+
 app.include_router(api_router)
+
+# CORS — allow production site, deploy previews, and local dev
+cors_origins = os.environ.get('CORS_ORIGINS', '')
+if cors_origins:
+    allowed_origins = [o.strip() for o in cors_origins.split(',') if o.strip()]
+else:
+    allowed_origins = [
+        "https://crestus.in",
+        "https://www.crestus.in",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],  # Permissive for now; tighten via CORS_ORIGINS env var later
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 
 @app.on_event("startup")
