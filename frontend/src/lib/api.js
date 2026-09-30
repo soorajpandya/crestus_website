@@ -121,13 +121,16 @@ const mockAdapter = async (config) => {
   // POST /orders/create or /orders/verify -> send to Cashfree backend
   if (path === "/orders/create" || path === "/orders/verify") {
     const urls = [];
-    if (process.env.REACT_APP_BACKEND_URL) {
-      urls.push(`${process.env.REACT_APP_BACKEND_URL.replace(/\/+$/, "")}/api${path}`);
-    }
-    // Try local backend on port 8000
+    // Try local backend on port 8000 first (if user is running node server.js locally)
     urls.push(`http://localhost:8000/api${path}`);
     // Try proxied /api route
     urls.push(`/api${path}`);
+    if (backendUrl) {
+      const remote = `${backendUrl.replace(/\/+$/, "")}/api${path}`;
+      if (!urls.includes(remote)) {
+        urls.push(remote);
+      }
+    }
 
     let lastErr = null;
 
@@ -182,6 +185,7 @@ const mockAdapter = async (config) => {
         }
         lastErr = new Error(data.detail || data.message || "Order request failed");
         lastErr.response = { status: response.status, data };
+        continue;
       } catch (e) {
         lastErr = e;
       }
@@ -226,10 +230,12 @@ if (backendUrl) {
   api.interceptors.response.use(
     (response) => response,
     async (error) => {
-      const isNetworkOr404 =
-        !error.response || error.response.status === 404 || error.code === "ERR_NETWORK";
+      const isNetworkOrError =
+        !error.response ||
+        error.response.status >= 400 ||
+        error.code === "ERR_NETWORK";
       const config = error.config;
-      if (isNetworkOr404 && config && config.url) {
+      if (isNetworkOrError && config && config.url) {
         // Fallback to mock adapter for product routes
         if (config.url.includes("/products")) {
           console.warn("[API] Backend unavailable. Falling back to local catalog data.");
@@ -237,7 +243,7 @@ if (backendUrl) {
         }
         // Fallback to mock adapter for order routes (tries localhost:8000 then proxy)
         if (config.url.includes("/orders")) {
-          console.warn("[API] Backend unavailable for orders. Trying direct fallback.");
+          console.warn("[API] Remote backend failed for orders. Trying local/proxy fallback.");
           return mockAdapter(config);
         }
       }
