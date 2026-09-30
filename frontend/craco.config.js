@@ -108,22 +108,113 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
-  // Add health check endpoints if enabled
-  if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
-    const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
+  const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
 
-    devServerConfig.setupMiddlewares = (middlewares, devServer) => {
-      // Call original setup if exists
-      if (originalSetupMiddlewares) {
-        middlewares = originalSetupMiddlewares(middlewares, devServer);
-      }
+  devServerConfig.setupMiddlewares = (middlewares, devServer) => {
+    if (originalSetupMiddlewares) {
+      middlewares = originalSetupMiddlewares(middlewares, devServer);
+    }
 
-      // Setup health endpoints
+    try {
+      const express = require("express");
+      const {
+        createCashfreeOrder,
+        getCashfreeOrder,
+        verifyCashfreeWebhook,
+      } = require("./cashfree-service");
+
+      devServer.app.use(express.json());
+
+      // Cashfree Create Order
+      devServer.app.post("/api/orders/create", async (req, res) => {
+        try {
+          const { items, address, amount } = req.body;
+          const total =
+            amount ||
+            (items || []).reduce(
+              (sum, it) => sum + (it.price || 0) * (it.qty || 1),
+              0
+            );
+          const orderId = `ord_${Date.now()}`;
+
+          const cfOrder = await createCashfreeOrder({
+            orderId,
+            orderAmount: total,
+            customerId: address?.phone || `cust_${Date.now()}`,
+            customerPhone: address?.phone || "9999999999",
+            customerName: address?.name || "Customer",
+            customerEmail: address?.email || "customer@crestus.in",
+            returnUrl: "https://crestus.in/orders?order_id={order_id}",
+          });
+
+          res.json({
+            order_id: orderId,
+            cf_order_id: cfOrder.cf_order_id,
+            payment_session_id: cfOrder.payment_session_id,
+            amount: total,
+            environment: cfOrder.environment,
+          });
+        } catch (err) {
+          console.error(
+            "[Cashfree] Create order error:",
+            err.response?.data || err.message
+          );
+          res
+            .status(500)
+            .json({ detail: err.response?.data?.message || err.message });
+        }
+      });
+
+      // Cashfree Verify Order
+      devServer.app.post("/api/orders/verify", async (req, res) => {
+        try {
+          const { order_id } = req.body;
+          const cfOrder = await getCashfreeOrder(order_id);
+          res.json({
+            order_id,
+            status: cfOrder.order_status,
+            paid: cfOrder.order_status === "PAID",
+            data: cfOrder,
+          });
+        } catch (err) {
+          console.error(
+            "[Cashfree] Verify error:",
+            err.response?.data || err.message
+          );
+          res
+            .status(500)
+            .json({ detail: err.response?.data?.message || err.message });
+        }
+      });
+
+      // Cashfree Webhook
+      devServer.app.post("/api/webhook", (req, res) => {
+        try {
+          const sig = req.headers["x-webhook-signature"];
+          const ts = req.headers["x-webhook-timestamp"];
+          const verified = verifyCashfreeWebhook(
+            sig,
+            JSON.stringify(req.body),
+            ts
+          );
+          console.log("[Cashfree Webhook] Verified signature:", verified);
+          res.json({ status: "ok" });
+        } catch (err) {
+          console.error("[Cashfree Webhook] Error:", err.message);
+          res.status(400).send("Webhook verification failed");
+        }
+      });
+    } catch (err) {
+      console.warn("[Cashfree] Setup middleware skipped:", err.message);
+    }
+
+    // Add health check endpoints if enabled
+    if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
       setupHealthEndpoints(devServer, healthPluginInstance);
+    }
 
-      return middlewares;
-    };
-  }
+    return middlewares;
+  };
 
   return devServerConfig;
 };

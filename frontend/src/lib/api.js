@@ -210,9 +210,14 @@ const mockAdapter = async (config) => {
   };
 };
 
+const isCrossOrigin = backendUrl && !backendUrl.startsWith(window.location.origin);
+
 const api = axios.create({
   baseURL: backendUrl ? `${backendUrl.replace(/\/+$/, "")}/api` : "/api",
-  withCredentials: true,
+  // withCredentials causes CORS preflight failures when the backend uses
+  // Access-Control-Allow-Origin: * (which Render does by default).
+  // Only enable for same-origin or when the backend explicitly supports it.
+  withCredentials: !isCrossOrigin,
   ...(backendUrl ? {} : { adapter: mockAdapter }),
 });
 
@@ -224,9 +229,17 @@ if (backendUrl) {
       const isNetworkOr404 =
         !error.response || error.response.status === 404 || error.code === "ERR_NETWORK";
       const config = error.config;
-      if (isNetworkOr404 && config && config.url && config.url.includes("/products")) {
-        console.warn("[API] Backend unavailable. Falling back to local catalog data.");
-        return mockAdapter(config);
+      if (isNetworkOr404 && config && config.url) {
+        // Fallback to mock adapter for product routes
+        if (config.url.includes("/products")) {
+          console.warn("[API] Backend unavailable. Falling back to local catalog data.");
+          return mockAdapter(config);
+        }
+        // Fallback to mock adapter for order routes (tries localhost:8000 then proxy)
+        if (config.url.includes("/orders")) {
+          console.warn("[API] Backend unavailable for orders. Trying direct fallback.");
+          return mockAdapter(config);
+        }
       }
       return Promise.reject(error);
     }

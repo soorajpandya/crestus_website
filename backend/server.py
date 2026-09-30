@@ -19,8 +19,8 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Cashfree Configuration
-CASHFREE_APP_ID = os.environ.get('CASHFREE_APP_ID', '')
-CASHFREE_SECRET_KEY = os.environ.get('CASHFREE_SECRET_KEY', '')
+CASHFREE_APP_ID = os.environ.get('CASHFREE_APP_ID', '14230288c95604eea0f624e274b8203241')
+CASHFREE_SECRET_KEY = os.environ.get('CASHFREE_SECRET_KEY', 'cfsk_ma_prod_91c964533da99cb33e652d468b62d49d_8e9459ae')
 CASHFREE_ENV = os.environ.get('CASHFREE_ENV', 'PRODUCTION').upper()
 CASHFREE_BASE_URL = (
     "https://sandbox.cashfree.com/pg" if CASHFREE_ENV == "SANDBOX"
@@ -195,12 +195,17 @@ async def create_order(body: CreateOrderRequest, request: Request):
     total = 0
     for it in body.items:
         product = await db.products.find_one({"id": it.product_id}, {"_id": 0})
-        if not product:
-            raise HTTPException(status_code=400, detail=f"Product {it.product_id} not found")
         qty = max(1, it.qty)
-        price = product["price"]
+        if product:
+            price = product["price"]
+            name = product["name"]
+            image = product.get("image", "")
+        else:
+            price = float(it.price or 0)
+            name = it.name or it.product_id
+            image = ""
         items.append({
-            "product_id": product["id"], "name": product["name"], "image": product.get("image", ""),
+            "product_id": it.product_id, "name": name, "image": image,
             "price": price, "size": it.size, "qty": qty,
         })
         total += price * qty
@@ -331,7 +336,14 @@ async def list_orders(request: Request):
     return await db.orders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
 
 
-# ---------- Health check ----------
+# ---------- Health & Root checks ----------
+@app.get("/")
+@app.head("/")
+async def root():
+    return {"status": "ok", "service": "crestus-api"}
+
+
+@app.get("/health")
 @api_router.get("/health")
 async def health():
     return {
@@ -353,12 +365,15 @@ else:
         "https://www.crestus.in",
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
     ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],  # Permissive for now; tighten via CORS_ORIGINS env var later
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"^https?://.*",
     allow_methods=["*"],
     allow_headers=["*"],
 )
