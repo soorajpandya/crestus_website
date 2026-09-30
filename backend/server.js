@@ -70,14 +70,25 @@ const saveOrders = () => {
 
 // Load products
 let products = [];
-const productsFile = path.join(__dirname, "../frontend/src/data/products.json");
-if (fs.existsSync(productsFile)) {
+const localProductsFile = path.join(__dirname, "products.json");
+const frontendProductsFile = path.join(__dirname, "../frontend/src/data/products.json");
+const targetFile = fs.existsSync(localProductsFile) ? localProductsFile : frontendProductsFile;
+if (fs.existsSync(targetFile)) {
   try {
-    products = JSON.parse(fs.readFileSync(productsFile, "utf-8"));
+    products = JSON.parse(fs.readFileSync(targetFile, "utf-8"));
   } catch {}
 }
 
-// Routes
+// Root & Health check
+app.get(["/", "/health"], (req, res) => {
+  res.json({
+    status: "ok",
+    service: "crestus-api",
+    gateway: "cashfree",
+    mode: IS_SANDBOX ? "sandbox" : "production",
+  });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
