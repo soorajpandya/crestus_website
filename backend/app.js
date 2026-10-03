@@ -258,16 +258,30 @@ function createApp(overrides = {}) {
 
   // Shiprocket validates the URL with a bare ping; answer it, but require the token for any real shipment payload.
   const isShipmentPayload = (body) => body && typeof body === "object" && (body.awb || body.order_id || body.channel_order_id || body.sr_order_id || body.shipment_id);
-  app.get(["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"], (_req, res) => res.json({ status: "ok", service: "crestus-shipping-webhook" }));
-  app.post(
-    ["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"],
+  const shippingWebhookPaths = ["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"];
+  app.all(
+    shippingWebhookPaths,
+    express.text({ type: ["text/*", "application/x-www-form-urlencoded"] }),
     asyncRoute(async (req, res) => {
-      if (!isShipmentPayload(req.body)) return res.json({ status: "ok", handled: false, reason: "ping" });
+      let body = req.body;
+      if (typeof body === "string") {
+        try {
+          body = JSON.parse(body);
+        } catch {
+          body = {};
+        }
+      }
+      logger.info(`[tracking] webhook ${req.method} ua="${req.headers["user-agent"] || ""}" ct="${req.headers["content-type"] || ""}" token=${req.headers["x-api-key"] ? "present" : "absent"} keys=${Object.keys(body || {}).slice(0, 12).join(",") || "-"}`);
+      if (req.method !== "POST" || !isShipmentPayload(body)) return res.json({ status: "ok", handled: false, reason: "ping" });
       try {
-        const result = await tracking.handleWebhook({ body: req.body, headers: req.headers });
+        const result = await tracking.handleWebhook({ body, headers: req.headers });
         res.json({ status: "ok", ...result });
       } catch (err) {
-        if (err.status) return res.status(err.status).json({ detail: err.message });
+        // Unauthenticated or unconfigured: ignore the payload (no state change) but don't fail provider validation.
+        if (err.status === 401 || err.status === 503) {
+          logger.warn(`[tracking] webhook ignored: ${err.message}`);
+          return res.json({ status: "ok", handled: false, reason: err.status === 401 ? "unauthorized" : "not_configured" });
+        }
         throw err;
       }
     })

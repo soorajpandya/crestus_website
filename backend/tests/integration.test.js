@@ -298,12 +298,18 @@ test("tracking webhooks are authenticated, deduplicated and order-independent", 
     const order = await t.services.store.getOrder(created.order_id);
     const awb = order.shipment.awb_code;
 
-    const bad = await t.request("POST", "/api/webhooks/shipping-updates", { body: { awb, order_id: created.order_id }, headers: { "x-api-key": "wrong" } });
-    assert.equal(bad.status, 401);
+    const statusBefore = order.tracking.status;
+    // Wrong token: acknowledged (provider validators expect 2xx) but nothing is applied.
+    const bad = await t.request("POST", "/api/webhooks/shipping-updates", { body: { awb, order_id: created.order_id, shipment_status_id: 7, current_status: "Delivered", current_timestamp: "2026-10-08 15:30:00" }, headers: { "x-api-key": "wrong" } });
+    assert.equal(bad.status, 200);
+    assert.equal(bad.data.handled, false);
+    assert.equal(bad.data.reason, "unauthorized");
+    assert.equal((await t.services.store.getOrder(created.order_id)).tracking.status, statusBefore);
     // Shiprocket's URL-validation ping carries no shipment data and must be acknowledged without a token.
     const ping = await t.request("POST", "/api/webhooks/shipping-updates", { body: {} });
     assert.equal(ping.status, 200);
     assert.equal((await t.request("GET", "/api/webhooks/shipping-updates")).status, 200);
+    assert.equal((await t.request("HEAD", "/api/webhooks/shipping-updates")).status, 200);
 
     const send = (body) => t.request("POST", "/api/webhooks/shipping-updates", { body, headers: { "x-api-key": "ship-token" } });
     const late = {
