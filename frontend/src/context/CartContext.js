@@ -152,11 +152,17 @@ export function CartProvider({ children }) {
     }
   };
 
+  // Removes only the purchased lines, so anything added mid-checkout stays in the bag.
+  const removeItems = (keys = []) => {
+    const set = new Set(keys);
+    setItems((prev) => prev.filter((i) => !set.has(i.key)));
+  };
+
   const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const count = items.reduce((sum, i) => sum + i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, updateQty, removeItem, clearCart, total, count, drawerOpen, setDrawerOpen }}>
+    <CartContext.Provider value={{ items, addItem, updateQty, removeItem, removeItems, clearCart, total, count, drawerOpen, setDrawerOpen }}>
       {children}
     </CartContext.Provider>
   );

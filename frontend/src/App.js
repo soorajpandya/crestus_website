@@ -13,6 +13,10 @@ import Shop from "@/pages/Shop";
 import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
+import OrderDetail from "@/pages/OrderDetail";
+import { PaymentSuccess, PaymentFailed, PaymentPending } from "@/pages/PaymentResult";
+import { AdminOrders, AdminOrderDetail } from "@/pages/AdminOrders";
+import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import { track } from "@/lib/firebase";
 import Collection from "@/pages/Collection";
@@ -58,8 +62,15 @@ function AppRouter() {
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/:order_id" element={<OrderDetail />} />
+        <Route path="/success" element={<PaymentSuccess />} />
+        <Route path="/failed" element={<PaymentFailed />} />
+        <Route path="/pending" element={<PaymentPending />} />
+        <Route path="/admin/orders" element={<AdminOrders />} />
+        <Route path="/admin/orders/:order_id" element={<AdminOrderDetail />} />
         <Route path="/new-arrivals" element={<Collection type="new" />} />
         <Route path="/best-sellers" element={<Collection type="best" />} />
         <Route path="/faq" element={<FAQ />} />

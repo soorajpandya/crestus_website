@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, signInWithGoogle, logOut } from "../lib/firebase";
+import api from "../lib/api";
 import { toast } from "sonner";
 
 const AuthContext = createContext(null);
@@ -8,6 +9,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -20,8 +22,11 @@ export function AuthProvider({ children }) {
           photoURL: firebaseUser.photoURL,
           picture: firebaseUser.photoURL,
         });
+        // Role comes from the backend (custom claim or ADMIN_EMAILS); the client never decides it.
+        api.get("/auth/me").then(({ data }) => setIsAdmin(Boolean(data?.is_admin))).catch(() => setIsAdmin(false));
       } else {
         setUser(null);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
@@ -62,7 +67,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, logout, signInWithGoogle: login }}>
+    <AuthContext.Provider value={{ user, setUser, loading, isAdmin, login, logout, signInWithGoogle: login }}>
       {children}
     </AuthContext.Provider>
   );

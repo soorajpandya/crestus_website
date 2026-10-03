@@ -1,13 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import { Minus, Plus, X } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 
 const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
 
 export const CartDrawer = () => {
   const { items, updateQty, removeItem, total, drawerOpen, setDrawerOpen } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    setDrawerOpen(false);
+    if (!user) {
+      navigate("/login?redirect=/checkout");
+    } else {
+      navigate("/checkout");
+    }
+  };
 
   return (
     <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -59,7 +70,7 @@ export const CartDrawer = () => {
               </div>
               <button
                 data-testid="checkout-button"
-                onClick={() => { setDrawerOpen(false); navigate("/checkout"); }}
+                onClick={handleCheckout}
                 className="w-full bg-ink text-white py-3.5 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors"
               >
                 Checkout

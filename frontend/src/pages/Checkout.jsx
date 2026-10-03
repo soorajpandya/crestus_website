@@ -1,23 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import api from "../lib/api";
+import api, { apiErrorMessage } from "../lib/api";
 import { track } from "../lib/firebase";
+import { openCashfreeCheckout } from "../lib/cashfree";
+import { inr, fmtDay } from "../lib/orderUi";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-
-const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
-
-// Dynamically load Cashfree JS SDK v3
-const loadCashfree = () =>
-  new Promise((resolve) => {
-    if (window.Cashfree) return resolve(window.Cashfree);
-    const s = document.createElement("script");
-    s.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
-    s.onload = () => resolve(window.Cashfree);
-    s.onerror = () => resolve(null);
-    document.body.appendChild(s);
-  });
 
 const EMPTY_ADDRESS = { name: "", email: "", phone: "", line1: "", city: "", state: "", pincode: "" };
 
@@ -101,12 +90,21 @@ export function validateAddress(address) {
 }
 
 export default function Checkout() {
-  const { items, total, clearCart } = useCart();
-  const { user, login } = useAuth();
+  const { items, total: cartTotal } = useCart();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [address, setAddress] = useState(EMPTY_ADDRESS);
   const [errors, setErrors] = useState({});
   const [paying, setPaying] = useState(false);
+  const [quote, setQuote] = useState(null);
+  const [quoteState, setQuoteState] = useState("idle"); // idle | loading | ready | error
+
+  // Require Google Sign-In before placing order
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login?redirect=/checkout", { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -117,6 +115,40 @@ export default function Checkout() {
       }));
     }
   }, [user]);
+
+  const itemsPayload = useMemo(() => items.map((i) => ({ product_id: i.product_id, size: i.size, qty: i.qty })), [items]);
+  const cartKeys = useMemo(() => items.map((i) => i.key), [items]);
+  const pincodeValid = /^\d{6}$/.test(address.pincode);
+
+  // Server-side quote: trusted prices + serviceability + shipping charge for this pincode.
+  useEffect(() => {
+    if (!user || items.length === 0 || !pincodeValid) {
+      setQuote(null);
+      setQuoteState("idle");
+      return undefined;
+    }
+    let cancelled = false;
+    setQuoteState("loading");
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await api.post("/checkout/quote", { items: itemsPayload, pincode: address.pincode });
+        if (cancelled) return;
+        setQuote(data);
+        setQuoteState("ready");
+        if (!data.serviceable) setErrors((prev) => ({ ...prev, pincode: "Sorry, we can't deliver to this pincode yet." }));
+        else setErrors((prev) => (prev.pincode?.startsWith("Sorry") ? { ...prev, pincode: null } : prev));
+      } catch (e) {
+        if (cancelled) return;
+        setQuote(null);
+        setQuoteState("error");
+        toast.error(apiErrorMessage(e, "Could not calculate shipping. Please try again."));
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [user, items.length, itemsPayload, address.pincode, pincodeValid]);
 
   const handleChange = (k) => (e) => {
     let val = e.target.value;
@@ -139,94 +171,48 @@ export default function Checkout() {
       toast.error(firstError || "Please fill in all address fields correctly");
       return;
     }
+    if (quote && !quote.serviceable) {
+      toast.error("Sorry, we can't deliver to this pincode yet.");
+      return;
+    }
     setErrors({});
     setPaying(true);
     track("begin_checkout", {
       currency: "INR",
-      value: total,
+      value: quote?.totals?.total ?? cartTotal,
       items: items.map((i) => ({ item_id: i.product_id, item_name: i.name, price: i.price, quantity: i.qty })),
     });
 
     try {
-      const CashfreeSDK = await loadCashfree();
-      if (!CashfreeSDK) {
-        throw new Error("Could not load Cashfree Checkout SDK");
-      }
-
-      // Create order with Cashfree SDK backend endpoint using validated address and user_id
-      const { data } = await api.post("/orders/create", {
-        items: items.map((i) => ({ product_id: i.product_id, size: i.size, qty: i.qty, price: i.price, name: i.name })),
-        amount: total,
-        address: cleanedAddress,
-        user_id: user?.uid || null,
-      });
-
+      // The backend snapshots the order (trusted prices, package, shipping) before any payment starts.
+      const { data } = await api.post("/orders/create", { items: itemsPayload, address: cleanedAddress, cart_keys: cartKeys });
       if (!data.payment_session_id) {
         throw new Error(data.detail || data.message || "Failed to initialize payment session");
       }
 
-      // Initialize Cashfree in production or sandbox mode
-      const cashfree = CashfreeSDK({
-        mode: data.environment || "production",
-      });
-
-      const checkoutOptions = {
-        paymentSessionId: data.payment_session_id,
-        redirectTarget: "_modal",
-      };
-
-      cashfree.checkout(checkoutOptions).then(async (result) => {
-        if (result.error) {
-          toast.error(result.error.message || "Payment cancelled or failed");
-          setPaying(false);
-          return;
-        }
-
-        if (result.paymentDetails || result.redirect) {
-          try {
-            await api.post("/orders/verify", {
-              order_id: data.order_id,
-              cf_order_id: data.cf_order_id,
-            });
-          } catch {
-            // Non-blocking verify
-          }
-
-          // Save order to user-scoped local order history
-          try {
-            const userOrdersKey = user?.uid ? `crestus_orders_${user.uid}` : "crestus_orders_guest";
-            const existingOrders = JSON.parse(localStorage.getItem(userOrdersKey) || "[]");
-            const newOrder = {
-              order_id: data.order_id,
-              cf_order_id: data.cf_order_id,
-              user_id: user?.uid || null,
-              amount: total,
-              status: "paid",
-              items,
-              address: cleanedAddress,
-              created_at: new Date().toISOString(),
-            };
-            localStorage.setItem(userOrdersKey, JSON.stringify([newOrder, ...existingOrders]));
-          } catch {}
-
-          track("purchase", {
-            transaction_id: data.order_id,
-            currency: "INR",
-            value: total,
-            items: items.map((i) => ({ item_id: i.product_id, item_name: i.name, price: i.price, quantity: i.qty })),
-          });
-
-          clearCart();
-          toast.success("Payment successful! Order placed.");
-          navigate("/orders");
-        }
-        setPaying(false);
-      });
+      const result = await openCashfreeCheckout({ paymentSessionId: data.payment_session_id, environment: data.environment });
+      if (result?.error && !result?.redirect && !result?.paymentDetails) {
+        // Modal closed or payment aborted — the order stays retrievable; the backend decides its real status.
+        toast.error(result.error.message || "Payment was not completed");
+        navigate(`/failed?order_id=${encodeURIComponent(data.order_id)}`);
+        return;
+      }
+      // Never trust the modal result: verify with the backend on the pending page.
+      navigate(`/pending?order_id=${encodeURIComponent(data.order_id)}`);
     } catch (e) {
-      toast.error(e.response?.data?.detail || e.message || "Could not start payment. Please try again.");
+      toast.error(apiErrorMessage(e, "Could not start payment. Please try again."));
+    } finally {
       setPaying(false);
     }
   };
+
+  if (loading) {
+    return <div className="pt-40 text-center text-zinc-400 min-h-screen">Loading…</div>;
+  }
+
+  if (!user) {
+    return null;
+  }
 
   if (items.length === 0) {
     return (
@@ -253,35 +239,32 @@ export default function Checkout() {
     { key: "pincode", label: "Pincode" },
   ];
 
+  const totals = quote?.totals;
+  const payable = totals?.total ?? cartTotal;
+  const canPay = !paying && pincodeValid && quoteState === "ready" && quote?.serviceable;
+
   return (
     <div data-testid="checkout-page" className="max-w-5xl mx-auto px-6 lg:px-10 pt-28 pb-24 min-h-screen">
       <h1 className="font-display font-semibold tracking-tighter text-4xl sm:text-5xl mb-6">Checkout</h1>
 
-      {user ? (
-        <div className="mb-8 flex items-center gap-3 p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs text-zinc-700">
+      <div className="mb-8 flex items-center justify-between p-4 bg-zinc-50 border border-zinc-200/90 rounded-2xl text-xs text-zinc-700">
+        <div className="flex items-center gap-3">
           {user.picture ? (
-            <img src={user.picture} alt={user.name} className="w-5 h-5 rounded-full object-cover" />
+            <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-zinc-200" />
           ) : (
-            <div className="w-5 h-5 rounded-full bg-zinc-200 flex items-center justify-center font-bold text-[10px]">
+            <div className="w-8 h-8 rounded-full bg-zinc-200 flex items-center justify-center font-bold text-xs">
               {user.name?.[0] || "U"}
             </div>
           )}
-          <span>
-            Signed in as <strong>{user.name}</strong> ({user.email}). This order will be linked to your account.
-          </span>
+          <div>
+            <p className="font-semibold text-zinc-900">{user.name}</p>
+            <p className="text-zinc-500 text-[11px]">{user.email}</p>
+          </div>
         </div>
-      ) : (
-        <div className="mb-8 flex items-center justify-between p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-xl text-xs text-amber-900">
-          <span>Sign in with Google to automatically track this order in your account.</span>
-          <button
-            type="button"
-            onClick={login}
-            className="font-bold text-amber-900 underline hover:text-brand-magenta transition-colors shrink-0 ml-3"
-          >
-            Sign in with Google →
-          </button>
-        </div>
-      )}
+        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/80">
+          ✓ Verified Google Account
+        </span>
+      </div>
 
       <div className="grid md:grid-cols-5 gap-12">
         <div className="md:col-span-3">
@@ -310,6 +293,11 @@ export default function Checkout() {
               );
             })}
           </div>
+          {quote?.courier?.etd && quote.serviceable && (
+            <p data-testid="delivery-estimate" className="text-xs text-zinc-500 mt-4">
+              Estimated delivery by <span className="font-semibold text-ink">{fmtDay(quote.courier.etd)}</span>
+            </p>
+          )}
         </div>
         <div className="md:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-5">Order summary</p>
@@ -320,17 +308,29 @@ export default function Checkout() {
                 <span className="font-semibold shrink-0">{inr(i.price * i.qty)}</span>
               </div>
             ))}
-            <div className="border-t border-zinc-200 pt-4 flex justify-between items-baseline">
-              <span className="text-xs uppercase tracking-widest text-zinc-500">Total</span>
-              <span data-testid="checkout-total" className="font-display text-2xl font-semibold">{inr(total)}</span>
+            <div className="border-t border-zinc-200 pt-4 space-y-2 text-sm">
+              <div className="flex justify-between text-zinc-600">
+                <span>Subtotal</span>
+                <span>{inr(totals?.subtotal ?? cartTotal)}</span>
+              </div>
+              <div className="flex justify-between text-zinc-600">
+                <span>Shipping</span>
+                <span data-testid="checkout-shipping">
+                  {!pincodeValid ? "Enter pincode" : quoteState === "loading" ? "Calculating…" : quoteState === "error" ? "Unavailable" : quote?.serviceable ? (totals.shipping > 0 ? inr(totals.shipping) : "Free") : "Not serviceable"}
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline pt-2">
+                <span className="text-xs uppercase tracking-widest text-zinc-500">Total</span>
+                <span data-testid="checkout-total" className="font-display text-2xl font-semibold">{inr(payable)}</span>
+              </div>
             </div>
             <button
               data-testid="pay-button"
               onClick={handlePay}
-              disabled={paying}
+              disabled={!canPay}
               className="w-full bg-brand-magenta text-white py-4 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-brand-darkorange transition-colors disabled:opacity-60"
             >
-              {paying ? "Processing…" : `Pay ${inr(total)}`}
+              {paying ? "Processing…" : quoteState === "loading" ? "Calculating…" : `Pay ${inr(payable)}`}
             </button>
             <p className="text-[11px] text-zinc-400 text-center">Secured by Cashfree Payments · UPI, Cards, Netbanking</p>
           </div>

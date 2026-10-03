@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingBag, Package, LogOut, User } from "lucide-react";
+import { ShoppingBag, Package, LogOut, User, ShieldCheck } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -8,7 +8,7 @@ import {
 
 export const Header = () => {
   const { count, setDrawerOpen } = useCart();
-  const { user, login, logout } = useAuth();
+  const { user, login, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -59,6 +59,11 @@ export const Header = () => {
                 <DropdownMenuItem data-testid="menu-orders" onClick={() => navigate("/orders")} className="cursor-pointer">
                   <Package size={15} className="mr-2" /> My Orders
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem data-testid="menu-admin" onClick={() => navigate("/admin/orders")} className="cursor-pointer">
+                    <ShieldCheck size={15} className="mr-2" /> Admin · Fulfillment
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem data-testid="menu-logout" onClick={logout} className="cursor-pointer text-rose-600 focus:text-rose-600">
                   <LogOut size={15} className="mr-2" /> Sign out
                 </DropdownMenuItem>
@@ -67,7 +72,7 @@ export const Header = () => {
           ) : (
             <button
               data-testid="login-button"
-              onClick={login}
+              onClick={() => navigate("/login")}
               className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] bg-ink text-white px-3.5 py-1.5 rounded-full hover:bg-brand-magenta transition-colors"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">

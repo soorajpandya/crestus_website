@@ -1,77 +1,32 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-
-const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
-
-const STATUS_STYLE = {
-  paid: "bg-emerald-100 text-emerald-700",
-  pending: "bg-amber-100 text-amber-700",
-  failed: "bg-red-100 text-red-700",
-};
+import { inr, fmtDate } from "../lib/orderUi";
+import { OrderItems, PaymentBadge, FulfillmentBadge } from "../components/OrderBits";
 
 export default function Orders() {
   const { user, loading, login } = useAuth();
   const [orders, setOrders] = useState(null);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) return;
-
+    if (!user) return undefined;
     let isMounted = true;
-    const fetchUserOrders = async () => {
-      try {
-        // Query server for user-specific orders
-        const { data } = await api.get("/orders", {
-          params: {
-            user_id: user.uid,
-            email: user.email,
-          },
-        });
-
-        // Strict client-side filter to guarantee user data isolation
-        const serverUserOrders = Array.isArray(data)
-          ? data.filter(
-              (o) =>
-                o.user_id === user.uid ||
-                (o.address?.email && o.address.email.toLowerCase() === user.email?.toLowerCase()) ||
-                (o.customer_email && o.customer_email.toLowerCase() === user.email?.toLowerCase())
-            )
-          : [];
-
-        // Also check user-scoped local orders
-        let localUserOrders = [];
-        try {
-          const raw = localStorage.getItem(`crestus_orders_${user.uid}`);
-          if (raw) localUserOrders = JSON.parse(raw) || [];
-        } catch {}
-
-        // Combine & deduplicate by order_id
-        const orderMap = new Map();
-        [...serverUserOrders, ...localUserOrders].forEach((ord) => {
-          if (ord?.order_id && !orderMap.has(ord.order_id)) {
-            orderMap.set(ord.order_id, ord);
-          }
-        });
-
+    // Orders are persisted server-side and scoped to the signed-in user's token.
+    api
+      .get("/orders")
+      .then(({ data }) => {
+        if (isMounted) setOrders(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
         if (isMounted) {
-          setOrders(Array.from(orderMap.values()));
+          setOrders([]);
+          setError("We couldn't load your orders right now. Please try again shortly.");
         }
-      } catch {
-        if (isMounted) {
-          // Fall back to local user-scoped orders if server call fails
-          try {
-            const raw = localStorage.getItem(`crestus_orders_${user.uid}`);
-            setOrders(raw ? JSON.parse(raw) : []);
-          } catch {
-            setOrders([]);
-          }
-        }
-      }
-    };
-
-    fetchUserOrders();
+      });
     return () => {
       isMounted = false;
     };
@@ -127,7 +82,7 @@ export default function Orders() {
         <p className="text-zinc-400">Loading your orders…</p>
       ) : orders.length === 0 ? (
         <div data-testid="orders-empty" className="text-center py-20">
-          <p className="text-zinc-500">You haven't placed any orders yet.</p>
+          <p className="text-zinc-500">{error || "You haven't placed any orders yet."}</p>
           <button
             data-testid="orders-go-shop"
             onClick={() => navigate("/shop")}
@@ -144,25 +99,35 @@ export default function Orders() {
                 <div>
                   <p className="text-xs uppercase tracking-widest text-zinc-400">Order</p>
                   <p className="font-semibold text-sm mt-0.5">{order.order_id}</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">{fmtDate(order.created_at)}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={`text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${STATUS_STYLE[order.status] || "bg-zinc-100 text-zinc-600"}`}>
-                    {order.status}
-                  </span>
-                  <span className="font-display text-lg font-semibold">{inr(order.amount)}</span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <PaymentBadge status={order.payment?.status} />
+                  <FulfillmentBadge status={order.fulfillment?.status} />
+                  <span className="font-display text-lg font-semibold">{inr(order.totals?.total)}</span>
                 </div>
               </div>
-              <div className="space-y-3">
-                {(order.items || []).map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4">
-                    <img src={item.image} alt={item.name} className="w-12 h-16 object-cover rounded-lg bg-zinc-100" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{item.name}</p>
-                      <p className="text-xs text-zinc-500">Size {item.size} · Qty {item.qty}</p>
-                    </div>
-                    <p className="text-sm font-semibold">{inr(item.price * item.qty)}</p>
-                  </div>
-                ))}
+              <OrderItems items={order.items} />
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <span className="text-zinc-500">
+                  {order.shipment?.awb_code
+                    ? `${order.shipment.courier_name || "Courier"} · AWB ${order.shipment.awb_code}`
+                    : order.payment?.status === "paid"
+                      ? "Tracking details will be available once your shipment is booked."
+                      : order.payment?.status === "pending"
+                        ? "Payment not completed yet."
+                        : ""}
+                </span>
+                <div className="flex gap-2">
+                  {["pending", "failed", "expired"].includes(order.payment?.status) && (
+                    <Link to={`/failed?order_id=${encodeURIComponent(order.order_id)}`} className="border border-zinc-300 px-4 py-2 rounded-full font-bold uppercase tracking-widest hover:border-ink transition-colors">
+                      Complete payment
+                    </Link>
+                  )}
+                  <Link to={`/orders/${order.order_id}`} data-testid={`order-detail-${order.order_id}`} className="inline-flex items-center gap-1 bg-ink text-white px-4 py-2 rounded-full font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors">
+                    {order.shipment?.awb_code ? "Track order" : "View details"} <ChevronRight size={13} />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}

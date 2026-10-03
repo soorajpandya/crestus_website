@@ -1,0 +1,26 @@
+{
+  "_comment": "Packaging rules used to compute Shiprocket package weight/dimensions. Weights are per unit in kg; dimensions in cm are per shipment box. VERIFY these against actual packed products before going live — they are explicit configuration, not measured values. A product whose subcategory is missing here (and has no `weight_kg` field) blocks checkout until configured.",
+  "box": { "length_cm": 30, "breadth_cm": 25, "height_cm": 5, "extra_height_per_additional_item_cm": 3, "max_height_cm": 40 },
+  "packaging_weight_kg": 0.1,
+  "default_item_weight_kg": null,
+  "subcategory_weight_kg": {
+    "Dresses": 0.4,
+    "Kurtis": 0.35,
+    "Co-ord Sets": 0.5,
+    "Sarees": 0.6,
+    "Jackets": 0.9,
+    "Shirts": 0.3,
+    "T-Shirts": 0.25,
+    "Vests": 0.2,
+    "Jeans": 0.6,
+    "Trousers": 0.5,
+    "Track Pants": 0.45,
+    "Ethnic Wear": 0.6,
+    "Shorts": 0.3,
+    "Kurta Sets": 0.7,
+    "Dupattas": 0.2,
+    "Tops & Blouses": 0.25,
+    "Lehengas": 1.2,
+    "Salwar Suits": 0.8
+  }
+}
