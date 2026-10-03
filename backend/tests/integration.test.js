@@ -311,7 +311,21 @@ test("tracking webhooks are authenticated, deduplicated and order-independent", 
     assert.equal((await t.request("GET", "/api/webhooks/shipping-updates")).status, 200);
     assert.equal((await t.request("HEAD", "/api/webhooks/shipping-updates")).status, 200);
 
-    const send = (body) => t.request("POST", "/api/webhooks/shipping-updates", { body, headers: { "x-api-key": "ship-token" } });
+    // Exact shape of Shiprocket's URL-validation request (captured): raw token in Authorization, dummy ids, "NA" statuses.
+    const validator = await t.request("POST", "/api/webhooks/shipping-updates", {
+      headers: { authorization: "ship-token" },
+      body: {
+        awb: "123456", courier_name: "dummy courier_name", current_status: "Delivered", current_status_id: 7, shipment_status: "Delivered", shipment_status_id: 7,
+        current_timestamp: "03 10 2026 17:53:11", order_id: "dummpy shiprocket order id 123", sr_order_id: 1234, etd: "2026-10-03 17:53:11",
+        scans: [{ location: "Mumbai", date: "2022-05-16 16:18:47", activity: "Manifested", status: "new", "sr-status": "NA", "sr-status-label": "NA" }],
+        is_return: 0, channel_id: 1234,
+      },
+    });
+    assert.equal(validator.status, 200);
+    assert.equal(validator.data.handled, false);
+    assert.equal((await t.services.store.getOrder(created.order_id)).tracking.status, statusBefore);
+
+    const send = (body) => t.request("POST", "/api/webhooks/shipping-updates", { body, headers: { authorization: "ship-token" } });
     const late = {
       awb,
       order_id: created.order_id,

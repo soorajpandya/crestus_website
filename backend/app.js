@@ -86,7 +86,7 @@ function createApp(overrides = {}) {
           body = Object.fromEntries(new URLSearchParams(raw));
         }
       }
-      logger.info(`[tracking] webhook ${req.method} ua="${req.headers["user-agent"] || ""}" ct="${req.headers["content-type"] || ""}" token=${req.headers["x-api-key"] ? "present" : "absent"} keys=${Object.keys(body || {}).slice(0, 12).join(",") || "-"}`);
+      logger.info(`[tracking] webhook ${req.method} ua="${req.headers["user-agent"] || ""}" ct="${req.headers["content-type"] || ""}" token=${req.headers["x-api-key"] || req.headers.authorization ? "present" : "absent"} keys=${Object.keys(body || {}).slice(0, 12).join(",") || "-"}`);
       if (req.method !== "POST" || !isShipmentPayload(body)) return res.json({ status: "ok", handled: false, reason: "ping" });
       try {
         const result = await tracking.handleWebhook({ body, headers: req.headers });

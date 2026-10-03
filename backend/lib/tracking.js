@@ -37,11 +37,17 @@ function mapStatus(rawId, rawLabel) {
 
 const TERMINAL = new Set(["delivered", "returned", "cancelled"]);
 
-// Shiprocket timestamps are IST without an offset.
+// Shiprocket timestamps are IST without an offset; webhooks use "DD MM YYYY HH:mm:ss", tracking API uses "YYYY-MM-DD HH:mm:ss".
 function toIso(value) {
   if (!value) return now();
-  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(value)) return new Date(`${value.replace(" ", "T")}+05:30`).toISOString();
-  const d = new Date(value);
+  const s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)) return new Date(`${s.replace(" ", "T")}+05:30`).toISOString();
+  const dmy = s.match(/^(\d{2})[ \/-](\d{2})[ \/-](\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (dmy) {
+    const [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = dmy;
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}+05:30`).toISOString();
+  }
+  const d = new Date(s);
   return Number.isNaN(d.getTime()) ? now() : d.toISOString();
 }
 
@@ -52,7 +58,8 @@ function eventId(e) {
 function normaliseActivity(a) {
   const rawId = a["sr-status"] ?? a.sr_status ?? a.status_id ?? null;
   const rawLabel = a["sr-status-label"] ?? a.sr_status_label ?? a.status ?? a.activity ?? "";
-  const ev = { at: toIso(a.date), raw_status_id: rawId !== null && rawId !== "" ? Number(rawId) : null, raw_status: String(rawLabel), activity: a.activity || null, location: a.location || null };
+  const numericId = Number(rawId);
+  const ev = { at: toIso(a.date), raw_status_id: rawId !== null && rawId !== "" && Number.isFinite(numericId) ? numericId : null, raw_status: String(rawLabel), activity: a.activity || null, location: a.location || null };
   ev.status = mapStatus(ev.raw_status_id, `${ev.raw_status} ${ev.activity || ""}`);
   ev.label = ev.raw_status || ev.activity;
   ev.id = eventId(ev);
@@ -121,7 +128,7 @@ function createTrackingService({ config, store, shiprocket, logger = console, on
     return null;
   }
 
-  // Shiprocket sends the configured token in x-api-key.
+  // Shiprocket sends the configured token as a raw Authorization header (no scheme); x-api-key is accepted too.
   async function handleWebhook({ body, headers }) {
     const token = config.shiprocket.webhookToken;
     if (!token) {
@@ -129,7 +136,7 @@ function createTrackingService({ config, store, shiprocket, logger = console, on
       e.status = 503;
       throw e;
     }
-    const presented = headers["x-api-key"] || headers["x-webhook-token"] || "";
+    const presented = String(headers["x-api-key"] || headers["x-webhook-token"] || headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
     const a = Buffer.from(String(presented));
     const b = Buffer.from(token);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
