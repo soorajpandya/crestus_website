@@ -70,6 +70,38 @@ function createApp(overrides = {}) {
       credentials: true,
     })
   );
+  // Shiprocket validates the URL with a bare ping; answer it, but require the token for any real shipment payload.
+  // Registered before the global JSON parser with its own tolerant body handling so a malformed probe can never 4xx.
+  const isShipmentPayload = (body) => body && typeof body === "object" && (body.awb || body.order_id || body.channel_order_id || body.sr_order_id || body.shipment_id);
+  app.all(
+    ["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"],
+    express.raw({ type: () => true, limit: "1mb" }),
+    asyncRoute(async (req, res) => {
+      let body = {};
+      const raw = Buffer.isBuffer(req.body) ? req.body.toString("utf8").trim() : "";
+      if (raw) {
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          body = Object.fromEntries(new URLSearchParams(raw));
+        }
+      }
+      logger.info(`[tracking] webhook ${req.method} ua="${req.headers["user-agent"] || ""}" ct="${req.headers["content-type"] || ""}" token=${req.headers["x-api-key"] ? "present" : "absent"} keys=${Object.keys(body || {}).slice(0, 12).join(",") || "-"}`);
+      if (req.method !== "POST" || !isShipmentPayload(body)) return res.json({ status: "ok", handled: false, reason: "ping" });
+      try {
+        const result = await tracking.handleWebhook({ body, headers: req.headers });
+        res.json({ status: "ok", ...result });
+      } catch (err) {
+        // Unauthenticated or unconfigured: ignore the payload (no state change) but don't fail provider validation.
+        if (err.status === 401 || err.status === 503) {
+          logger.warn(`[tracking] webhook ignored: ${err.message}`);
+          return res.json({ status: "ok", handled: false, reason: err.status === 401 ? "unauthorized" : "not_configured" });
+        }
+        throw err;
+      }
+    })
+  );
+
   app.use(
     express.json({
       limit: "1mb",
@@ -255,37 +287,6 @@ function createApp(overrides = {}) {
     }
   });
   app.post(["/webhook", "/api/webhooks/cashfree"], cashfreeWebhook);
-
-  // Shiprocket validates the URL with a bare ping; answer it, but require the token for any real shipment payload.
-  const isShipmentPayload = (body) => body && typeof body === "object" && (body.awb || body.order_id || body.channel_order_id || body.sr_order_id || body.shipment_id);
-  const shippingWebhookPaths = ["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"];
-  app.all(
-    shippingWebhookPaths,
-    express.text({ type: ["text/*", "application/x-www-form-urlencoded"] }),
-    asyncRoute(async (req, res) => {
-      let body = req.body;
-      if (typeof body === "string") {
-        try {
-          body = JSON.parse(body);
-        } catch {
-          body = {};
-        }
-      }
-      logger.info(`[tracking] webhook ${req.method} ua="${req.headers["user-agent"] || ""}" ct="${req.headers["content-type"] || ""}" token=${req.headers["x-api-key"] ? "present" : "absent"} keys=${Object.keys(body || {}).slice(0, 12).join(",") || "-"}`);
-      if (req.method !== "POST" || !isShipmentPayload(body)) return res.json({ status: "ok", handled: false, reason: "ping" });
-      try {
-        const result = await tracking.handleWebhook({ body, headers: req.headers });
-        res.json({ status: "ok", ...result });
-      } catch (err) {
-        // Unauthenticated or unconfigured: ignore the payload (no state change) but don't fail provider validation.
-        if (err.status === 401 || err.status === 503) {
-          logger.warn(`[tracking] webhook ignored: ${err.message}`);
-          return res.json({ status: "ok", handled: false, reason: err.status === 401 ? "unauthorized" : "not_configured" });
-        }
-        throw err;
-      }
-    })
-  );
 
   // ---- admin --------------------------------------------------------------
   const admin = express.Router();
