@@ -256,9 +256,13 @@ function createApp(overrides = {}) {
   });
   app.post(["/webhook", "/api/webhooks/cashfree"], cashfreeWebhook);
 
+  // Shiprocket validates the URL with a bare ping; answer it, but require the token for any real shipment payload.
+  const isShipmentPayload = (body) => body && typeof body === "object" && (body.awb || body.order_id || body.channel_order_id || body.sr_order_id || body.shipment_id);
+  app.get(["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"], (_req, res) => res.json({ status: "ok", service: "crestus-shipping-webhook" }));
   app.post(
-    "/api/webhooks/shipping-updates",
+    ["/api/webhooks/shipping-updates", "/api/webhooks/shipping-updates/"],
     asyncRoute(async (req, res) => {
+      if (!isShipmentPayload(req.body)) return res.json({ status: "ok", handled: false, reason: "ping" });
       try {
         const result = await tracking.handleWebhook({ body: req.body, headers: req.headers });
         res.json({ status: "ok", ...result });

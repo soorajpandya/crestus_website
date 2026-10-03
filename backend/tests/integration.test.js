@@ -300,6 +300,10 @@ test("tracking webhooks are authenticated, deduplicated and order-independent", 
 
     const bad = await t.request("POST", "/api/webhooks/shipping-updates", { body: { awb, order_id: created.order_id }, headers: { "x-api-key": "wrong" } });
     assert.equal(bad.status, 401);
+    // Shiprocket's URL-validation ping carries no shipment data and must be acknowledged without a token.
+    const ping = await t.request("POST", "/api/webhooks/shipping-updates", { body: {} });
+    assert.equal(ping.status, 200);
+    assert.equal((await t.request("GET", "/api/webhooks/shipping-updates")).status, 200);
 
     const send = (body) => t.request("POST", "/api/webhooks/shipping-updates", { body, headers: { "x-api-key": "ship-token" } });
     const late = {
