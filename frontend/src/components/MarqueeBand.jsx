@@ -1,6 +1,6 @@
 import Marquee from "react-fast-marquee";
 
-const WORDS = ["New Season Drop", "Men", "Women", "Crafted For Every Day", "Free Shipping Over ₹1999", "Wear The Moment"];
+const WORDS = ["50% Off Every Product", "Men", "Women", "Styles From ₹100", "Free Shipping Over ₹1999", "Wear The Moment"];
 
 export const MarqueeBand = ({ dark = false }) => (
   <div className={`py-5 border-y ${dark ? "bg-ink border-zinc-800" : "bg-white border-zinc-100"}`}>

@@ -77,7 +77,7 @@ export default function ProductDetail() {
           <p className="text-zinc-600 leading-relaxed mt-6 max-w-md text-sm md:text-base">{product.description}</p>
 
           <div className="mt-8 space-y-2 text-sm">
-            <p><span className="text-zinc-400 uppercase text-xs tracking-widest mr-3">Fabric</span> {product.fabric}</p>
+            <p><span className="text-zinc-400 uppercase text-xs tracking-widest mr-3">Material</span> {product.fabric}</p>
             <p><span className="text-zinc-400 uppercase text-xs tracking-widest mr-3">Colour</span> {product.color}</p>
           </div>
 

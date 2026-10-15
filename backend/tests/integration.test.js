@@ -2,7 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { startTestServer, USER_A, USER_B, ADMIN, ADDRESS } = require("./helpers");
 
-const ITEMS = [{ product_id: "w-midnight-slip", size: "M", qty: 1 }]; // ₹2499 → free shipping
+const DRESS_PRICE = require("../products.json").find((p) => p.id === "w-midnight-slip").price;
+const ITEMS = [{ product_id: "w-midnight-slip", size: "M", qty: 1 }]; // Catalog sale price qualifies for free shipping.
 const CHEAP_ITEMS = [{ product_id: "w-midnight-slip", size: "M", qty: 1, price: 1 }];
 
 async function placeOrder(t, items = ITEMS, user = USER_A) {
@@ -16,9 +17,9 @@ test("quote computes totals on the backend and applies the published shipping po
   try {
     const free = await t.request("POST", "/api/checkout/quote", { user: USER_A, body: { pincode: "400001", items: [{ product_id: "w-midnight-slip", size: "M", qty: 1, price: 5 }] } });
     assert.equal(free.status, 200);
-    assert.equal(free.data.totals.subtotal, 2499);
+    assert.equal(free.data.totals.subtotal, DRESS_PRICE);
     assert.equal(free.data.totals.shipping, 0);
-    assert.equal(free.data.totals.total, 2499);
+    assert.equal(free.data.totals.total, DRESS_PRICE);
     assert.equal(free.data.serviceable, true);
     assert.ok(free.data.package.weight_kg > 0);
 
@@ -44,17 +45,17 @@ test("order is persisted before payment and client-supplied amounts are ignored"
   const t = await startTestServer();
   try {
     const created = await placeOrder(t, CHEAP_ITEMS);
-    assert.equal(created.amount, 2499);
+    assert.equal(created.amount, DRESS_PRICE);
     assert.ok(created.payment_session_id);
     const stored = await t.services.store.getOrder(created.order_id);
     assert.equal(stored.payment.status, "pending");
-    assert.equal(stored.totals.total, 2499);
-    assert.equal(stored.items[0].unit_price, 2499);
+    assert.equal(stored.totals.total, DRESS_PRICE);
+    assert.equal(stored.items[0].unit_price, DRESS_PRICE);
     assert.equal(stored.items[0].sku, "W-MIDNIGHT-SLIP-M");
     assert.equal(stored.shipping_address.pincode, "400001");
     assert.equal(stored.package.weight_kg, 0.5);
     assert.equal(stored.pickup_location, "Primary");
-    assert.equal(t.cashfree.calls[0][1].order_amount, 2499);
+    assert.equal(t.cashfree.calls[0][1].order_amount, DRESS_PRICE);
     assert.match(t.cashfree.calls[0][1].order_meta.return_url, /^https:\/\/crestuseccommerce\.store\/pending\?order_id=/);
     assert.equal(t.shiprocket.behaviour.calls.filter((c) => c.name === "createAdhocOrder").length, 0);
   } finally {
@@ -73,7 +74,7 @@ test("full payment creates exactly one Shiprocket order and books the shipment e
 
     const order = await t.services.store.getOrder(created.order_id);
     assert.equal(order.payment.status, "paid");
-    assert.equal(order.payment.amount_paid, 2499);
+    assert.equal(order.payment.amount_paid, DRESS_PRICE);
     assert.ok(order.payment.cf_payment_id);
     assert.equal(order.fulfillment.status, "completed");
     assert.equal(order.fulfillment.stage, "done");
@@ -422,7 +423,7 @@ test("retry payment reuses or recreates a Cashfree session and refuses when alre
     t.cashfree.markExpired(created.cashfree_order_id);
     const r2 = await t.request("POST", `/api/orders/${created.order_id}/retry-payment`, { user: USER_A });
     assert.equal(r2.data.cashfree_order_id, `${created.order_id}-r2`);
-    assert.equal(t.cashfree.calls.filter((c) => c[0] === "create").at(-1)[1].order_amount, 2499);
+    assert.equal(t.cashfree.calls.filter((c) => c[0] === "create").at(-1)[1].order_amount, DRESS_PRICE);
 
     t.cashfree.markPaid(r2.data.cashfree_order_id);
     // Cashfree's return_url carries the suffixed id; customer routes must resolve it to the internal order.
@@ -459,7 +460,7 @@ test("admin can cancel a shipment and refund separately", async () => {
     const refund = await t.request("POST", `/api/admin/orders/${created.order_id}/refund`, { user: ADMIN, body: { reason: "Cancelled before dispatch" } });
     assert.equal(refund.status, 200);
     assert.equal(refund.data.payment.status, "refunded");
-    assert.equal(refund.data.payment.refunds[0].amount, 2499);
+    assert.equal(refund.data.payment.refunds[0].amount, DRESS_PRICE);
   } finally {
     await t.close();
   }

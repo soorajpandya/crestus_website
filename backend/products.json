@@ -1,10 +1,250 @@
 [
   {
+    "id": "m-everyday-cotton-tee",
+    "name": "Everyday Cotton T-Shirt",
+    "category": "men",
+    "subcategory": "T-Shirts",
+    "price": 200,
+    "mrp": 400,
+    "image": "/images/products/m-everyday-cotton-tee.jpg",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "badge": "New",
+    "color": "Forest Green",
+    "fabric": "Cotton",
+    "description": "A forest green crew-neck cotton T-shirt with short sleeves and a relaxed everyday fit. Pair it with jeans, shorts or casual trousers."
+  },
+  {
+    "id": "w-everyday-cotton-tee",
+    "name": "Everyday Cotton T-Shirt",
+    "category": "women",
+    "subcategory": "T-Shirts",
+    "price": 200,
+    "mrp": 400,
+    "image": "/images/products/w-everyday-cotton-tee.jpg",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "badge": "New",
+    "color": "Dusty Rose",
+    "fabric": "Cotton",
+    "description": "A dusty rose crew-neck cotton T-shirt with short sleeves and an easy everyday fit. A simple staple for casual outfits."
+  },
+  {
+    "id": "m-everyday-casual-shirt",
+    "name": "Everyday Casual Shirt",
+    "category": "men",
+    "subcategory": "Shirts",
+    "price": 400,
+    "mrp": 800,
+    "image": "/images/products/m-everyday-casual-shirt.jpg",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "badge": "New",
+    "color": "Light Blue",
+    "fabric": "Cotton Blend",
+    "description": "A light blue cotton-blend casual shirt with long sleeves, a classic collar and a chest pocket. Wear it buttoned up or layered over a T-shirt."
+  },
+  {
+    "id": "w-everyday-straight-kurti",
+    "name": "Everyday Straight Kurti",
+    "category": "women",
+    "subcategory": "Kurtis",
+    "price": 400,
+    "mrp": 800,
+    "image": "/images/products/w-everyday-straight-kurti.jpg",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "badge": "New",
+    "color": "Deep Teal",
+    "fabric": "Cotton Blend",
+    "description": "A deep teal cotton-blend straight kurti with three-quarter sleeves, a round neckline and a short button placket. Side slits and a simple cut make it easy to pair with leggings or trousers."
+  },
+  {
+    "id": "m-cotton-crew-socks",
+    "name": "Cotton Crew Socks \u2014 1 Pair",
+    "category": "men",
+    "subcategory": "Socks",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/m-cotton-crew-socks.jpg",
+    "sizes": [
+      "Free Size"
+    ],
+    "badge": "New",
+    "color": "Charcoal Grey",
+    "fabric": "Cotton Blend",
+    "description": "A pair of charcoal grey cotton-blend crew socks with ribbed cuffs. An easy everyday essential for casual shoes and trainers."
+  },
+  {
+    "id": "w-cotton-ankle-socks",
+    "name": "Cotton Ankle Socks \u2014 3 Pairs",
+    "category": "women",
+    "subcategory": "Socks",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/w-cotton-ankle-socks.jpg",
+    "sizes": [
+      "Free Size"
+    ],
+    "badge": "New",
+    "color": "Blush Pink / Grey / Cream",
+    "fabric": "Cotton Blend",
+    "description": "Three pairs of cotton-blend ankle socks in blush pink, light grey and cream. A soft everyday set for casual shoes and trainers."
+  },
+  {
+    "id": "m-sports-baseball-cap",
+    "name": "Everyday Baseball Cap",
+    "category": "men",
+    "subcategory": "Caps",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/m-sports-baseball-cap.jpg",
+    "sizes": [
+      "Adjustable"
+    ],
+    "badge": "New",
+    "color": "Navy Blue",
+    "fabric": "Cotton",
+    "description": "A navy blue six-panel baseball cap with a curved brim and adjustable back strap. A simple finishing touch for casual outfits and outdoor days."
+  },
+  {
+    "id": "w-fashion-tape",
+    "name": "Double-Sided Fashion Tape \u2014 36 Strips",
+    "category": "women",
+    "subcategory": "Fashion Tape",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/w-fashion-tape.jpg",
+    "sizes": [
+      "36 Strips"
+    ],
+    "badge": "New",
+    "color": "Clear",
+    "fabric": "Double-Sided Adhesive",
+    "description": "A pack of 36 double-sided fashion tape strips for securing clothing edges, necklines and dress straps. Peel off the backing and apply to clean, dry surfaces."
+  },
+  {
+    "id": "m-stretch-woven-belt",
+    "name": "Stretch Woven Belt",
+    "category": "men",
+    "subcategory": "Belts",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/m-stretch-woven-belt.jpg",
+    "sizes": [
+      "Up to 36 in"
+    ],
+    "badge": "New",
+    "color": "Dark Brown",
+    "fabric": "Woven Elastic / PU Trim",
+    "description": "A dark brown stretch woven belt with PU end tabs and a silver-tone buckle. The flexible weave offers an adjustable fit for waist sizes up to 36 inches."
+  },
+  {
+    "id": "w-braided-headband",
+    "name": "Braided Fabric Headband",
+    "category": "women",
+    "subcategory": "Hair Accessories",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/w-braided-headband.jpg",
+    "sizes": [
+      "Free Size"
+    ],
+    "badge": "New",
+    "color": "Blush Pink",
+    "fabric": "Fabric",
+    "description": "A blush pink fabric headband with a braided crown and covered tips. An effortless accessory for keeping hair in place and finishing everyday looks."
+  },
+  {
+    "id": "m-gym-sweatband-set",
+    "name": "Gym Headband & Wristband Set",
+    "category": "men",
+    "subcategory": "Sweatbands",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/m-gym-sweatband-set.jpg",
+    "sizes": [
+      "Free Size"
+    ],
+    "badge": "New",
+    "color": "Black",
+    "fabric": "Cotton Blend Terry",
+    "description": "A three-piece black terry sweatband set: one stretch headband and two matching wristbands. Made for gym sessions, sports and everyday workouts."
+  },
+  {
+    "id": "w-printed-stole",
+    "name": "Botanical Print Lightweight Stole",
+    "category": "women",
+    "subcategory": "Stoles & Scarves",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/w-printed-stole.jpg",
+    "sizes": [
+      "Free Size"
+    ],
+    "badge": "New",
+    "color": "Ivory / Dusty Rose",
+    "fabric": "Viscose",
+    "description": "A lightweight ivory stole with a dusty rose botanical print and short fringed edges. Wear it loosely around the neck or drape it over a casual outfit."
+  },
+  {
+    "id": "m-cotton-bandana",
+    "name": "Paisley Cotton Bandana",
+    "category": "men",
+    "subcategory": "Bandanas",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/m-cotton-bandana.jpg",
+    "sizes": [
+      "Free Size"
+    ],
+    "badge": "New",
+    "color": "Navy / White",
+    "fabric": "Cotton",
+    "description": "A navy cotton bandana with a white paisley print. Fold and tie it as a neck scarf or head wrap for a versatile everyday accessory."
+  },
+  {
+    "id": "w-dupatta-clips",
+    "name": "Pearl-Detail Dupatta Clips \u2014 4 Pack",
+    "category": "women",
+    "subcategory": "Dupatta Clips",
+    "price": 100,
+    "mrp": 200,
+    "image": "/images/products/w-dupatta-clips.jpg",
+    "sizes": [
+      "4 Pack"
+    ],
+    "badge": "New",
+    "color": "Silver / Pearl White",
+    "fabric": "Metal / Faux Pearl",
+    "description": "A set of four silver-tone dupatta clips with pearl-white oval details and spring fastenings. Use them to secure a dupatta, scarf or stole in place."
+  },
+  {
     "id": "w-midnight-slip",
     "name": "Midnight Satin Slip Dress",
     "category": "women",
     "subcategory": "Dresses",
-    "price": 2499,
+    "price": 1999.5,
     "mrp": 3999,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/6d6529dae61b149cec883f91c96c50de10e043cc8dcc4d57817103b766982fd1.png",
     "sizes": [
@@ -24,7 +264,7 @@
     "name": "Pearl Detail Shirt Dress",
     "category": "women",
     "subcategory": "Dresses",
-    "price": 2299,
+    "price": 1899.5,
     "mrp": 3799,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/a905eec471aad13a4fbb541b5533ff5c5acacb6ec9a12467975dabf5352ace85.png",
     "sizes": [
@@ -44,7 +284,7 @@
     "name": "Peach Embroidered Kurta",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 1599,
+    "price": 1349.5,
     "mrp": 2699,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/658c73f77abf1e22e563420e751d02eb9ea92fd0919a0028fb26d150fa0661ee.png",
     "sizes": [
@@ -64,7 +304,7 @@
     "name": "Sunset Tiered Dress",
     "category": "women",
     "subcategory": "Dresses",
-    "price": 2399,
+    "price": 1849.5,
     "mrp": 3699,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/090019568246f9d3d506c06cbbbd6f86bfa92d278291fd83fbab2ba719abde6a.png",
     "sizes": [
@@ -84,7 +324,7 @@
     "name": "Dark Brown Embroidered Kurta",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 1599,
+    "price": 1399.5,
     "mrp": 2799,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/d5cb7ce1b7f4766924e230d21460a4ac926e23975c52aa845e11a309685e590d.png",
     "sizes": [
@@ -104,7 +344,7 @@
     "name": "Black Printed Cotton Kurta",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 2199,
+    "price": 1899.5,
     "mrp": 3799,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/ae3bc9575963ef218665d0400e69deb6b6f356072ae585c3875fd268043996c0.png",
     "sizes": [
@@ -124,7 +364,7 @@
     "name": "Olive Floral Anarkali Dress",
     "category": "women",
     "subcategory": "Dresses",
-    "price": 2599,
+    "price": 1999.5,
     "mrp": 3999,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/81be7c1ceffb0a0e3e8eb38cfd2ade0ac5848dd0b0bbda2cd1c298f6de1e1722.png",
     "sizes": [
@@ -144,7 +384,7 @@
     "name": "Sunset Embroidered Kurta",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 1699,
+    "price": 1399.5,
     "mrp": 2799,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/e4411d74dfdf19fefee91289602101dc97794e8f5953743f8a0019a34663279b.png",
     "sizes": [
@@ -164,7 +404,7 @@
     "name": "Linen Co-ord Set \u2014 Oatmeal",
     "category": "women",
     "subcategory": "Co-ord Sets",
-    "price": 1999,
+    "price": 1749.5,
     "mrp": 3499,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/41ccab0e75ff0a8137585fedfe3bdb5c6b83b66e19a816b34373e4746092c10d.png",
     "sizes": [
@@ -184,7 +424,7 @@
     "name": "Red Floral Print Kurta",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 1599,
+    "price": 1349.5,
     "mrp": 2699,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/7d020a96bcbc67cb5de19465955e8353683d6f92e2419cafd65468d63d9c0e9e.png",
     "sizes": [
@@ -204,7 +444,7 @@
     "name": "Purple Printed Co-ord Set",
     "category": "women",
     "subcategory": "Co-ord Sets",
-    "price": 1399,
+    "price": 1149.5,
     "mrp": 2299,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/ad053a5bd081f3999ef8a3124f370e756915f46fa43d0ee1a3b4c595275f31a9.png",
     "sizes": [
@@ -224,7 +464,7 @@
     "name": "Trendy Shibori Fancy Saree",
     "category": "women",
     "subcategory": "Sarees",
-    "price": 1199,
+    "price": 674.5,
     "mrp": 1349,
     "image": "https://images.meesho.com/images/products/383474406/rsthw_512.webp?width=360",
     "sizes": [
@@ -240,7 +480,7 @@
     "name": "Abhisarika Sirosky Work Saree",
     "category": "women",
     "subcategory": "Sarees",
-    "price": 1249,
+    "price": 699.5,
     "mrp": 1399,
     "image": "https://images.meesho.com/images/products/541121290/cntih_512.webp?width=360",
     "sizes": [
@@ -256,7 +496,7 @@
     "name": "Urbane Graceful Rain Suit",
     "category": "men",
     "subcategory": "Jackets",
-    "price": 1499,
+    "price": 849.5,
     "mrp": 1699,
     "image": "https://images.meesho.com/images/products/41980623/inueq_512.webp?width=360",
     "sizes": [
@@ -276,7 +516,7 @@
     "name": "Pack of 2 Partywear Shirts",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1299,
+    "price": 749.5,
     "mrp": 1499,
     "image": "https://images.meesho.com/images/products/40764135/x6l3q_512.webp?width=360",
     "sizes": [
@@ -296,7 +536,7 @@
     "name": "Trendy Elegant T-Shirt",
     "category": "men",
     "subcategory": "T-Shirts",
-    "price": 1099,
+    "price": 624.5,
     "mrp": 1249,
     "image": "https://images.meesho.com/images/products/91388895/ijjhe_512.webp?width=360",
     "sizes": [
@@ -316,7 +556,7 @@
     "name": "Stylish Knitted Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1149,
+    "price": 649.5,
     "mrp": 1299,
     "image": "https://images.meesho.com/images/products/528142282/ujxhi_512.webp?width=360",
     "sizes": [
@@ -336,7 +576,7 @@
     "name": "Trendy Latest Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1049,
+    "price": 699.5,
     "mrp": 1399,
     "image": "https://images.meesho.com/images/products/382911951/aq5vj_512.webp?width=360",
     "sizes": [
@@ -356,7 +596,7 @@
     "name": "Urbane Partywear Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1199,
+    "price": 674.5,
     "mrp": 1349,
     "image": "https://images.meesho.com/images/products/500401403/tg0jv_512.webp?width=360",
     "sizes": [
@@ -376,7 +616,7 @@
     "name": "Fancy Graceful Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1249,
+    "price": 699.5,
     "mrp": 1399,
     "image": "https://images.meesho.com/images/products/541773415/7rqim_512.webp?width=360",
     "sizes": [
@@ -396,7 +636,7 @@
     "name": "Linen Tie-Waist Set",
     "category": "men",
     "subcategory": "Co-ord Sets",
-    "price": 1899,
+    "price": 1549.5,
     "mrp": 3099,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/3d23c566445d935ab1991697b27cfb11be59e99e2c2ada4768f0103b7743a17f.png",
     "sizes": [
@@ -416,7 +656,7 @@
     "name": "Yellow & Navy Polo T-Shirt",
     "category": "men",
     "subcategory": "T-Shirts",
-    "price": 1499,
+    "price": 1249.5,
     "mrp": 2499,
     "image": "https://static.prod-images.emergentagent.com/jobs/f89c7927-1e8b-4177-b57a-7abbe78d832f/images/791cd4837c7ce1b92c7155c6252453b20e0b0501929761edfc340a618da25968.png",
     "sizes": [
@@ -436,7 +676,7 @@
     "name": "Trendy Glamorous Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1099,
+    "price": 649.5,
     "mrp": 1299,
     "image": "https://images.meesho.com/images/products/50094957/zgqcm_512.webp?width=360",
     "sizes": [
@@ -456,7 +696,7 @@
     "name": "Classic Gym Vest",
     "category": "men",
     "subcategory": "Vests",
-    "price": 1049,
+    "price": 599.5,
     "mrp": 1199,
     "image": "https://images.meesho.com/images/products/293751425/lhqua_512.webp?width=360",
     "sizes": [
@@ -476,7 +716,7 @@
     "name": "Pretty Ravishing Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 606,
+    "price": 583,
     "mrp": 1166,
     "image": "https://images.meesho.com/images/products/44175508/bbvuf_512.webp?width=360",
     "sizes": [
@@ -496,7 +736,7 @@
     "name": "Classy Partywear T-Shirt",
     "category": "men",
     "subcategory": "T-Shirts",
-    "price": 930,
+    "price": 465,
     "mrp": 930,
     "image": "https://images.meesho.com/images/products/273087421/whumg_512.webp?width=360",
     "sizes": [
@@ -516,7 +756,7 @@
     "name": "Arianna Fashionista Jeans",
     "category": "men",
     "subcategory": "Jeans",
-    "price": 1313,
+    "price": 656.5,
     "mrp": 1313,
     "image": "https://images.meesho.com/images/products/4812797/1_512.webp?width=360",
     "sizes": [
@@ -536,7 +776,7 @@
     "name": "Sam & Jack Trousers",
     "category": "men",
     "subcategory": "Trousers",
-    "price": 1386,
+    "price": 693,
     "mrp": 1386,
     "image": "https://images.meesho.com/images/products/7115185/7dc4c_512.webp?width=360",
     "sizes": [
@@ -556,7 +796,7 @@
     "name": "Elegant Unique Track Pants",
     "category": "men",
     "subcategory": "Track Pants",
-    "price": 497,
+    "price": 541,
     "mrp": 1082,
     "image": "https://images.meesho.com/images/products/70145947/pztra_512.webp?width=360",
     "sizes": [
@@ -576,7 +816,7 @@
     "name": "Stylus Vest",
     "category": "men",
     "subcategory": "Vests",
-    "price": 1061,
+    "price": 530.5,
     "mrp": 1061,
     "image": "https://images.meesho.com/images/products/88793806/uq0vn_512.webp?width=360",
     "sizes": [
@@ -596,7 +836,7 @@
     "name": "Fashionable Kurta Set",
     "category": "men",
     "subcategory": "Ethnic Wear",
-    "price": 1309,
+    "price": 654.5,
     "mrp": 1309,
     "image": "https://images.meesho.com/images/products/40007079/ykqwx_512.webp?width=360",
     "sizes": [
@@ -616,7 +856,7 @@
     "name": "Fashionable Glamorous Shorts",
     "category": "men",
     "subcategory": "Shorts",
-    "price": 633,
+    "price": 593.5,
     "mrp": 1187,
     "image": "https://images.meesho.com/images/products/75098693/ngg6d_512.webp?width=360",
     "sizes": [
@@ -636,7 +876,7 @@
     "name": "Urbane Fabulous Jacket",
     "category": "men",
     "subcategory": "Jackets",
-    "price": 738,
+    "price": 633.5,
     "mrp": 1267,
     "image": "https://images.meesho.com/images/products/26303587/gchqk_512.webp?width=360",
     "sizes": [
@@ -656,7 +896,7 @@
     "name": "Ethnic Premium Cotton Printed Shirt",
     "category": "men",
     "subcategory": "Shirts",
-    "price": 1054,
+    "price": 527,
     "mrp": 1054,
     "image": "https://images.meesho.com/images/products/2653067/1_512.webp?width=360",
     "sizes": [
@@ -676,7 +916,7 @@
     "name": "FANG Jeans",
     "category": "men",
     "subcategory": "Jeans",
-    "price": 1249,
+    "price": 624.5,
     "mrp": 1249,
     "image": "https://images.meesho.com/images/products/46295400/lsf5p_512.webp?width=360",
     "sizes": [
@@ -696,7 +936,7 @@
     "name": "Fancy Fashionista Jeans",
     "category": "men",
     "subcategory": "Jeans",
-    "price": 631,
+    "price": 593,
     "mrp": 1186,
     "image": "https://images.meesho.com/images/products/64144768/bjctb_512.webp?width=360",
     "sizes": [
@@ -716,7 +956,7 @@
     "name": "Designer Modern Trousers",
     "category": "men",
     "subcategory": "Trousers",
-    "price": 1071,
+    "price": 535.5,
     "mrp": 1071,
     "image": "https://images.meesho.com/images/products/287409981/loxll_512.webp?width=360",
     "sizes": [
@@ -736,7 +976,7 @@
     "name": "Zeffit Track Pants",
     "category": "men",
     "subcategory": "Track Pants",
-    "price": 577,
+    "price": 572,
     "mrp": 1144,
     "image": "https://images.meesho.com/images/products/1707198/1_512.webp?width=360",
     "sizes": [
@@ -756,7 +996,7 @@
     "name": "Stylish Kurta Set",
     "category": "men",
     "subcategory": "Ethnic Wear",
-    "price": 553,
+    "price": 563,
     "mrp": 1126,
     "image": "https://images.meesho.com/images/products/455799004/acsls_512.webp?width=360",
     "sizes": [
@@ -776,7 +1016,7 @@
     "name": "Casual Active Shorts",
     "category": "men",
     "subcategory": "Shorts",
-    "price": 883,
+    "price": 441.5,
     "mrp": 883,
     "image": "https://images.meesho.com/images/products/54241863/n59bw_512.webp?width=360",
     "sizes": [
@@ -796,7 +1036,7 @@
     "name": "Pretty Graceful Jacket",
     "category": "men",
     "subcategory": "Jackets",
-    "price": 881,
+    "price": 689,
     "mrp": 1378,
     "image": "https://images.meesho.com/images/products/18342280/nzehy_512.webp?width=360",
     "sizes": [
@@ -816,7 +1056,7 @@
     "name": "Classic Fashionista Blazer",
     "category": "men",
     "subcategory": "Jackets",
-    "price": 1029,
+    "price": 745.5,
     "mrp": 1491,
     "image": "https://images.meesho.com/images/products/87533209/yzlsj_512.webp?width=360",
     "sizes": [
@@ -835,7 +1075,7 @@
     "name": "Charvi Fashionable Saree",
     "category": "women",
     "subcategory": "Sarees",
-    "price": 601,
+    "price": 581,
     "mrp": 1162,
     "image": "https://images.meesho.com/images/products/521238874/klpg5_512.webp?width=360",
     "sizes": [
@@ -851,7 +1091,7 @@
     "name": "Rayon Banita Alluring Kurti",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 974,
+    "price": 487,
     "mrp": 974,
     "image": "https://images.meesho.com/images/products/386229233/nlubb_512.webp?width=360",
     "sizes": [
@@ -871,7 +1111,7 @@
     "name": "Cotton Trendy Kurta Set",
     "category": "women",
     "subcategory": "Kurta Sets",
-    "price": 1086,
+    "price": 543,
     "mrp": 1086,
     "image": "https://images.meesho.com/images/products/435899553/9vr0k_512.webp?width=360",
     "sizes": [
@@ -891,7 +1131,7 @@
     "name": "Rayon Slub Charvi Dupatta Set",
     "category": "women",
     "subcategory": "Dupattas",
-    "price": 1095,
+    "price": 547.5,
     "mrp": 1095,
     "image": "https://images.meesho.com/images/products/546542300/uuytk_512.webp?width=360",
     "sizes": [
@@ -907,7 +1147,7 @@
     "name": "Classy Blouse",
     "category": "women",
     "subcategory": "Tops & Blouses",
-    "price": 459,
+    "price": 526.5,
     "mrp": 1053,
     "image": "https://images.meesho.com/images/products/473901562/ojbeo_512.webp?width=360",
     "sizes": [
@@ -927,7 +1167,7 @@
     "name": "Myra Petite Lehenga",
     "category": "women",
     "subcategory": "Lehengas",
-    "price": 714,
+    "price": 624.5,
     "mrp": 1249,
     "image": "https://images.meesho.com/images/products/517765238/3hdyu_512.webp?width=360",
     "sizes": [
@@ -943,7 +1183,7 @@
     "name": "Trendy Fashionable Gown",
     "category": "women",
     "subcategory": "Dresses",
-    "price": 1214,
+    "price": 607,
     "mrp": 1214,
     "image": "https://images.meesho.com/images/products/297415239/5aadc_512.webp?width=360",
     "sizes": [
@@ -963,7 +1203,7 @@
     "name": "Trendy Alluring Salwar Suit",
     "category": "women",
     "subcategory": "Salwar Suits",
-    "price": 1214,
+    "price": 607,
     "mrp": 1214,
     "image": "https://images.meesho.com/images/products/201295920/zby3r_512.webp?width=360",
     "sizes": [
@@ -979,7 +1219,7 @@
     "name": "Aakarsha Fabulous Ethnic Skirt",
     "category": "women",
     "subcategory": "Ethnic Wear",
-    "price": 1023,
+    "price": 511.5,
     "mrp": 1023,
     "image": "https://images.meesho.com/images/products/465067865/qn36z_512.webp?width=360",
     "sizes": [
@@ -995,7 +1235,7 @@
     "name": "Alisha Refined Saree",
     "category": "women",
     "subcategory": "Sarees",
-    "price": 479,
+    "price": 534,
     "mrp": 1068,
     "image": "https://images.meesho.com/images/products/438377875/qvlfv_512.webp?width=360",
     "sizes": [
@@ -1011,7 +1251,7 @@
     "name": "Poly Crepe Aishani Kurti",
     "category": "women",
     "subcategory": "Kurtis",
-    "price": 375,
+    "price": 494,
     "mrp": 988,
     "image": "https://images.meesho.com/images/products/497051184/md6hc_512.webp?width=360",
     "sizes": [
@@ -1031,7 +1271,7 @@
     "name": "Cotton Adrika Kurta Set",
     "category": "women",
     "subcategory": "Kurta Sets",
-    "price": 402,
+    "price": 504.5,
     "mrp": 1009,
     "image": "https://images.meesho.com/images/products/538169360/vzpvm_512.webp?width=360",
     "sizes": [
@@ -1051,7 +1291,7 @@
     "name": "Chanderi Cotton Dupatta Set",
     "category": "women",
     "subcategory": "Dupattas",
-    "price": 819,
+    "price": 665,
     "mrp": 1330,
     "image": "https://images.meesho.com/images/products/481263934/jcg7p_512.webp?width=360",
     "sizes": [
@@ -1067,7 +1307,7 @@
     "name": "Myra Fabulous Lehenga",
     "category": "women",
     "subcategory": "Lehengas",
-    "price": 826,
+    "price": 668,
     "mrp": 1336,
     "image": "https://images.meesho.com/images/products/394804191/sx1en_512.webp?width=360",
     "sizes": [
@@ -1083,7 +1323,7 @@
     "name": "Ethnic Gown",
     "category": "women",
     "subcategory": "Dresses",
-    "price": 532,
+    "price": 554.5,
     "mrp": 1109,
     "image": "https://images.meesho.com/images/products/498511327/wbeyb_512.webp?width=360",
     "sizes": [
@@ -1103,7 +1343,7 @@
     "name": "Myra Graceful Salwar Suit",
     "category": "women",
     "subcategory": "Salwar Suits",
-    "price": 886,
+    "price": 691,
     "mrp": 1382,
     "image": "https://images.meesho.com/images/products/43814823/hcbql_512.webp?width=360",
     "sizes": [
@@ -1119,7 +1359,7 @@
     "name": "Jivika Refined Ethnic Skirt",
     "category": "women",
     "subcategory": "Ethnic Wear",
-    "price": 1049,
+    "price": 524.5,
     "mrp": 1049,
     "image": "https://images.meesho.com/images/products/374114608/qhshj_512.webp?width=360",
     "sizes": [

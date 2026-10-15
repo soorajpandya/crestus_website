@@ -3,6 +3,8 @@
 ## Layout
 
 - `frontend/` — React (CRA + craco). Talks only to `REACT_APP_BACKEND_URL/api` with the user's Firebase ID token.
+- Catalog data is mirrored in `backend/products.json`, `frontend/src/data/products.json` (offline fallback), and `backend/products_seed.py` (legacy Python seed). The ten everyday accessories and four budget clothing items use original images in `frontend/public/images/products/`; their generation prompts are recorded in [`docs/product-image-prompts.json`](docs/product-image-prompts.json).
+- All catalog selling prices include the 50% offer: `price = mrp / 2`, with a minimum selling price of ₹100 (minimum catalog MRP ₹200). Existing MRPs above ₹200 are preserved. The new men's and women's T-shirts sell for ₹200 (MRP ₹400); the casual shirt and straight kurti sell for ₹400 (MRP ₹800). Checkout uses these final catalog prices without applying a second discount.
 - `backend/` — Node/Express API, order store, payment confirmation, fulfillment worker and tracking.
   - `app.js` builds the app; `server.js` boots it and starts the worker.
   - `lib/payments.js` — single idempotent Cashfree confirmation path (webhook, return page, retry, reconciliation).
