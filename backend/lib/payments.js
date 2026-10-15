@@ -9,6 +9,17 @@ const AMOUNT_TOLERANCE = 0.01;
 const cashfreeOrderIdFor = (orderId, attempt) => (attempt <= 1 ? orderId : `${orderId}-r${attempt}`);
 const internalOrderIdFrom = (cashfreeOrderId) => String(cashfreeOrderId || "").replace(/-r\d+$/, "");
 
+function productOrderNote(order) {
+  const names = [...new Set((order.items || []).map((item) => String(item.name || "").trim()).filter(Boolean))];
+  if (!names.length) {
+    const error = new Error("Attach the actual product items before creating a payment session");
+    error.status = 422;
+    throw error;
+  }
+  const note = names.join(", ");
+  return note.length <= 200 ? note : note.slice(0, 197) + "...";
+}
+
 function createPaymentService({ config, store, cashfree, logger = console, onPaid = async () => {} }) {
   const environment = config.cashfree.sandbox ? "sandbox" : "production";
   const returnUrl = `${config.frontendUrl}/pending?order_id={order_id}`;
@@ -26,7 +37,7 @@ function createPaymentService({ config, store, cashfree, logger = console, onPai
         customer_email: order.customer.email,
       },
       order_meta: { return_url: returnUrl },
-      order_note: `Crestus order ${order.order_id}`,
+      order_note: productOrderNote(order),
       order_tags: { internal_order_id: order.order_id },
     });
     const data = response.data;
