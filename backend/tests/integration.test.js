@@ -56,6 +56,7 @@ test("order is persisted before payment and client-supplied amounts are ignored"
     assert.equal(stored.package.weight_kg, 0.5);
     assert.equal(stored.pickup_location, "Primary");
     assert.equal(t.cashfree.calls[0][1].order_amount, DRESS_PRICE);
+    assert.equal(t.cashfree.calls[0][1].order_note, require("../products.json").find((p) => p.id === "w-midnight-slip").name);
     assert.match(t.cashfree.calls[0][1].order_meta.return_url, /^https:\/\/crestuseccommerce\.store\/pending\?order_id=/);
     assert.equal(t.shiprocket.behaviour.calls.filter((c) => c.name === "createAdhocOrder").length, 0);
   } finally {
