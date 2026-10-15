@@ -302,6 +302,9 @@ export default function Checkout() {
         <div className="md:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-5">Order summary</p>
           <div className="bg-zinc-50 rounded-2xl p-6 space-y-4">
+            <p data-testid="checkout-automatic-offer" className="text-xs leading-relaxed text-brand-maroon bg-white border border-brand-maroon/15 rounded-xl px-4 py-3">
+              <strong>50% off every product.</strong> Already included in the prices below. No code needed.
+            </p>
             {items.map((i) => (
               <div key={i.key} className="flex justify-between text-sm gap-3">
                 <span className="text-zinc-600 truncate">{i.name} · {i.size} × {i.qty}</span>
@@ -313,6 +316,12 @@ export default function Checkout() {
                 <span>Subtotal</span>
                 <span>{inr(totals?.subtotal ?? cartTotal)}</span>
               </div>
+              {totals?.discount > 0 && (
+                <div data-testid="checkout-savings" className="flex justify-between text-brand-maroon">
+                  <span>You save on MRP</span>
+                  <span>{inr(totals.discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-zinc-600">
                 <span>Shipping</span>
                 <span data-testid="checkout-shipping">

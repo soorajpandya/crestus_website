@@ -13,15 +13,15 @@ export const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 border-b border-zinc-100">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-        <Link to="/" data-testid="header-logo" className="font-display font-semibold text-xl tracking-tighter">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
+        <Link to="/" data-testid="header-logo" className="font-display font-semibold text-xl tracking-tighter shrink-0">
           CRESTUS<span className="text-brand-magenta">.</span>
         </Link>
-        <nav className="flex items-center gap-6 sm:gap-8">
-          <Link to="/shop?c=men" data-testid="nav-men" className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-700 hover:text-brand-magenta transition-colors">
+        <nav className="flex items-center gap-2 sm:gap-8">
+          <Link to="/shop?c=men" data-testid="nav-men" className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.18em] text-zinc-700 hover:text-brand-magenta transition-colors">
             Men
           </Link>
-          <Link to="/shop?c=women" data-testid="nav-women" className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-700 hover:text-brand-magenta transition-colors">
+          <Link to="/shop?c=women" data-testid="nav-women" className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.18em] text-zinc-700 hover:text-brand-magenta transition-colors">
             Women
           </Link>
           <button
@@ -73,7 +73,7 @@ export const Header = () => {
             <button
               data-testid="login-button"
               onClick={() => navigate("/login")}
-              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] bg-ink text-white px-3.5 py-1.5 rounded-full hover:bg-brand-magenta transition-colors"
+              className="inline-flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em] sm:tracking-[0.16em] bg-ink text-white px-2.5 sm:px-3.5 py-1.5 rounded-full hover:bg-brand-magenta transition-colors whitespace-nowrap"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                 <path

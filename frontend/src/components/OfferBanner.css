@@ -1,0 +1,75 @@
+.offer-banner {
+  --offer-ink: #641329;
+  --offer-paper: #f5ecde;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--offer-paper);
+  color: var(--offer-ink);
+}
+
+.offer-banner__copy { padding: 42px 48px; position: relative; z-index: 1; }
+.offer-banner__logo { font-family: 'Outfit', sans-serif; font-size: 25px; font-weight: 600; letter-spacing: -1.5px; color: #0a0a0a; margin: 0 0 32px; }
+.offer-banner__logo span { color: #f41cb2; }
+.offer-banner__eyebrow { font-size: 10px; font-weight: 700; line-height: 1.5; letter-spacing: .26em; text-transform: uppercase; margin: 0 0 14px; }
+.offer-banner__title { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(38px, 4.4vw, 60px); font-weight: 400; line-height: 1.01; letter-spacing: -.055em; margin: 0; }
+.offer-banner__discount { display: flex; align-items: center; gap: 16px; margin: 20px 0 16px; }
+.offer-banner__discount strong { font-family: 'Outfit', sans-serif; font-size: clamp(80px, 9vw, 124px); font-weight: 600; line-height: .9; letter-spacing: -.075em; }
+.offer-banner__discount > span { font-family: 'Outfit', sans-serif; font-size: 42px; font-weight: 600; line-height: 1; letter-spacing: -.04em; }
+.offer-banner__discount small { display: block; font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 600; line-height: 1.6; letter-spacing: .01em; margin-top: 8px; }
+.offer-banner__description { max-width: 350px; font-size: 13px; line-height: 1.7; margin: 0; }
+.offer-banner__actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+.offer-banner__button { display: inline-flex; justify-content: space-between; align-items: center; gap: 20px; min-height: 46px; padding: 12px 18px; background: var(--offer-ink); color: var(--offer-paper); border: 1px solid var(--offer-ink); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; transition: opacity .2s, transform .2s; }
+.offer-banner__button:hover { opacity: .82; transform: translateY(-2px); }
+.offer-banner__button:focus-visible { outline: 3px solid #f41cb2; outline-offset: 4px; }
+.offer-banner__button--outline { background: transparent; color: var(--offer-ink); }
+.offer-banner__terms { margin: 18px 0 0; font-size: 10px; line-height: 1.6; opacity: .8; }
+.offer-banner__photo { position: relative; min-width: 0; background: var(--offer-paper); }
+.offer-banner__photo img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; object-position: center; }
+.offer-banner__photo-note { position: absolute; bottom: 22px; right: 24px; font-size: 8px; font-weight: 700; letter-spacing: .18em; color: #fff; text-shadow: 0 1px 5px #000; }
+.offer-banner--sage { --offer-ink: #243a2b; --offer-paper: #e8eddf; }
+.offer-banner--orange { --offer-ink: #111510; --offer-paper: #ff6b20; }
+.offer-banner--sage .offer-banner__discount { position: relative; width: fit-content; }
+.offer-banner--sage .offer-banner__discount::after { content: ''; position: absolute; width: 103%; height: 7px; background: #c4e75d; transform: rotate(-3deg); bottom: -6px; left: -2%; z-index: -1; }
+.offer-banner--orange .offer-banner__title { font-family: 'Outfit', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 44px; letter-spacing: -.055em; }
+.offer-banner--compact { grid-template-columns: 1.08fr .92fr; }
+.offer-banner--compact .offer-banner__copy { padding: 30px 28px; }
+.offer-banner--compact .offer-banner__logo { font-size: 20px; margin-bottom: 30px; }
+.offer-banner--compact .offer-banner__eyebrow { font-size: 8px; letter-spacing: .17em; }
+.offer-banner--compact .offer-banner__title { font-size: 34px; }
+.offer-banner--compact .offer-banner__discount { gap: 10px; margin-top: 22px; }
+.offer-banner--compact .offer-banner__discount strong { font-size: 76px; }
+.offer-banner--compact .offer-banner__discount > span { font-size: 26px; }
+.offer-banner--compact .offer-banner__discount small { font-size: 8px; }
+.offer-banner--compact .offer-banner__description { font-size: 11px; }
+.offer-banner--compact .offer-banner__terms { font-size: 9px; }
+.offer-banner--compact .offer-banner__photo-note { font-size: 6px; right: 12px; }
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .offer-banner__copy { padding: 34px 30px; }
+  .offer-banner__discount strong { font-size: 88px; }
+  .offer-banner__discount > span { font-size: 32px; }
+  .offer-banner__button { gap: 10px; padding: 12px; }
+}
+
+@media (max-width: 767px) {
+  .offer-banner, .offer-banner--compact { grid-template-columns: 1fr; }
+  .offer-banner__copy, .offer-banner--compact .offer-banner__copy { padding: 30px 26px; }
+  .offer-banner__logo, .offer-banner--compact .offer-banner__logo { font-size: 23px; margin-bottom: 26px; }
+  .offer-banner__title, .offer-banner--compact .offer-banner__title { font-size: clamp(34px, 10.8vw, 42px); }
+  .offer-banner__discount strong, .offer-banner--compact .offer-banner__discount strong { font-size: clamp(72px, 24vw, 96px); }
+  .offer-banner__discount > span, .offer-banner--compact .offer-banner__discount > span { font-size: clamp(28px, 8.8vw, 34px); }
+  .offer-banner__discount small, .offer-banner--compact .offer-banner__discount small { font-size: 10px; }
+  .offer-banner__description, .offer-banner--compact .offer-banner__description { font-size: 12px; }
+  .offer-banner__terms, .offer-banner--compact .offer-banner__terms { font-size: 10px; }
+  .offer-banner__photo { height: 320px; }
+  .offer-banner__photo img { object-position: center 35%; }
+  .offer-banner__photo-note, .offer-banner--compact .offer-banner__photo-note { font-size: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offer-banner__button { transition: none; }
+  .offer-banner__button:hover { transform: none; }
+}
