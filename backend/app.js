@@ -295,11 +295,18 @@ function createApp(overrides = {}) {
   admin.use(auth.requireAdmin);
   admin.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   admin.param("order_id", normaliseOrderParam);
-  admin.get('/overview', asyncRoute(async (_req, res) => {
-    res.json(adminReports.overview(await store.listOrders({ limit: Infinity }), products));
+  const reports = adminReports.createAdminReports({ store, auth });
+  const refreshReports = req => req.query.refresh === '1';
+  admin.get('/overview', asyncRoute(async (req, res) => {
+    res.json(adminReports.overview(await reports.orders(refreshReports(req)), products));
   }));
-  admin.get('/customers', asyncRoute(async (_req, res) => {
-    res.json(adminReports.customerRecords(await store.listOrders({ limit: Infinity })));
+  admin.get('/customers', asyncRoute(async (req, res) => {
+    const [orders, users] = await Promise.all([reports.orders(refreshReports(req)), reports.users(refreshReports(req))]);
+    const search = String(req.query.search || '').trim().toLowerCase();
+    const customers = adminReports.directoryRecords(orders, users).filter(customer => !search ||
+      [customer.id, customer.name, customer.email, customer.phone].some(value => String(value || '').toLowerCase().includes(search)));
+    if (req.query.page === undefined) return res.json(customers);
+    res.json({ ...adminReports.paginate(customers, req.query), directory_available: users !== null });
   }));
   admin.get('/catalog', (_req, res) => res.json(products));
   admin.get('/settings', (_req, res) => res.json({
@@ -314,11 +321,15 @@ function createApp(overrides = {}) {
     "/orders",
     asyncRoute(async (req, res) => {
       if (req.query.page !== undefined) {
-        const result = adminReports.orderPage(await store.listOrders({ limit: Infinity }), req.query);
+        const result = adminReports.orderPage(await reports.orders(refreshReports(req)), req.query);
         return res.json({ ...result, items: result.items.map(toAdminView) });
       }
-      const list = await store.listOrders({ limit: Math.min(Number(req.query.limit) || 100, 500), paymentStatus: req.query.payment_status || undefined, fulfillmentStatus: req.query.fulfillment_status || undefined });
-      res.json(list.map(toAdminView));
+      // Older admin clients still expect an array. Use the same complete, cached
+      // summaries as the paginated UI instead of silently stopping at 100/500.
+      const list = adminReports.filterOrders(await reports.orders(refreshReports(req)), req.query);
+      const limit = Number(req.query.limit);
+      const selected = Number.isFinite(limit) && limit > 0 ? list.slice(0, Math.floor(limit)) : list;
+      res.json(selected.map(toAdminView));
     })
   );
   const adminOrder = async (req, res) => {

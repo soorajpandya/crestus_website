@@ -116,7 +116,7 @@ function overview(orders, products, now = new Date()) {
   };
 }
 
-function orderPage(orders, query) {
+function filterOrders(orders, query) {
   const search = String(query.search || '').trim().toLowerCase();
   const matches = orders.filter(o => {
     if (query.scope === 'storefront' && isHistoricalImport(o)) return false;
@@ -125,7 +125,11 @@ function orderPage(orders, query) {
     if (query.fulfillment_status && o.fulfillment?.status !== query.fulfillment_status) return false;
     return !search || [o.order_id, o.customer?.name, o.customer?.email, o.customer?.phone, o.shipment?.awb_code, o.payment?.cashfree_order_id].some(value => String(value || '').toLowerCase().includes(search));
   }).sort((a, b) => orderTime(b).localeCompare(orderTime(a)));
-  return paginate(matches, query);
+  return matches;
 }
 
-module.exports = { overview, customerRecords, orderPage, directoryRecords, paginate, createAdminReports, ORDER_SUMMARY_FIELDS };
+function orderPage(orders, query) {
+  return paginate(filterOrders(orders, query), query);
+}
+
+module.exports = { overview, customerRecords, orderPage, filterOrders, directoryRecords, paginate, createAdminReports, ORDER_SUMMARY_FIELDS };

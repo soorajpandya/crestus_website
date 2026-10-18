@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AdminLayout, AdminOrdersPage, AdminCatalog } from './AdminPanel';
+import { AdminLayout, AdminOrdersPage, AdminCatalog, AdminCustomers } from './AdminPanel';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { isAdminHost } from '../lib/adminUi';
@@ -54,12 +54,35 @@ test('signed out user is redirected and a customer is denied access', async () =
   expect(container.querySelector('[data-testid="protected-content"]')).toBeNull();
 });
 
-test('orders filters request server pagination and preserve storefront scope', async () => {
+test('orders default to all records and filters request server pagination', async () => {
   api.get.mockResolvedValue({ data: { items: [], page: 1, pages: 1, total: 0 } });
   await render(<AdminOrdersPage />);
-  expect(api.get).toHaveBeenLastCalledWith('/admin/orders', { params: { page: 1, page_size: 25, scope: 'storefront', search: '' } });
+  expect(api.get).toHaveBeenLastCalledWith('/admin/orders', { params: { page: 1, page_size: 25, scope: 'all', search: '' } });
   await click([...container.querySelectorAll('button')].find(button => button.textContent === 'Needs attention'));
   expect(api.get).toHaveBeenLastCalledWith('/admin/orders', { params: expect.objectContaining({ page: 1, fulfillment_status: 'needs_attention' }) });
+});
+
+test('orders can reach later pages and manual refresh bypasses the report cache', async () => {
+  api.get.mockResolvedValue({ data: { items: [], page: 1, pages: 141, total: 3508 } });
+  await render(<AdminOrdersPage />);
+  api.get.mockResolvedValue({ data: { items: [], page: 2, pages: 141, total: 3508 } });
+  await click([...container.querySelectorAll('button')].find(button => button.textContent.includes('Next')));
+  expect(api.get).toHaveBeenLastCalledWith('/admin/orders', { params: expect.objectContaining({ page: 2, scope: 'all' }) });
+  await click([...container.querySelectorAll('button')].find(button => button.textContent.includes('Refresh')));
+  expect(api.get).toHaveBeenLastCalledWith('/admin/orders', { params: expect.objectContaining({ page: 2, refresh: 1 }) });
+  await click([...container.querySelectorAll('button')].find(button => button.textContent.includes('Previous')));
+  expect(api.get.mock.calls.at(-1)[1].params.refresh).toBeUndefined();
+});
+
+test('user directory renders registered accounts with no orders and paginates on the server', async () => {
+  api.get.mockResolvedValue({ data: { items: [{ id: 'new-user', name: 'New account', registered: true, orders: 0, storefront_orders: 0, historical_orders: 0, amount_paid: 0 }], page: 1, pages: 2, total: 26, directory_available: true } });
+  await render(<AdminCustomers />);
+  expect(api.get).toHaveBeenLastCalledWith('/admin/customers', { params: { page: 1, page_size: 25, search: '' } });
+  expect(container.textContent).toContain('New account');
+  expect(container.textContent).toContain('Registered');
+  expect(container.textContent).toContain('26 users & customers');
+  await click([...container.querySelectorAll('button')].find(button => button.textContent.includes('Next')));
+  expect(api.get).toHaveBeenLastCalledWith('/admin/customers', { params: { page: 2, page_size: 25, search: '' } });
 });
 
 test('failed requests show a retry action and never render a misleading empty state', async () => {

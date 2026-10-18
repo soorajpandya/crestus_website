@@ -1,32 +1,39 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Lenis from "lenis";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
-import { Header } from "@/components/Header";
-import { CartDrawer } from "@/components/CartDrawer";
-import { Footer } from "@/components/Footer";
-import Home from "@/pages/Home";
-import Shop from "@/pages/Shop";
-import ProductDetail from "@/pages/ProductDetail";
-import Checkout from "@/pages/Checkout";
-import Orders from "@/pages/Orders";
-import OrderDetail from "@/pages/OrderDetail";
-import { PaymentSuccess, PaymentFailed, PaymentPending } from "@/pages/PaymentResult";
-import { AdminOrderDetail } from "@/pages/AdminOrders";
 import { AdminLayout, AdminOverview, AdminOrdersPage, AdminCatalog, AdminCustomers, AdminSettings, AdminNotFound } from "@/pages/AdminPanel";
 import { isAdminHost } from "@/lib/adminUi";
-import Login from "@/pages/Login";
-import AuthCallback from "@/pages/AuthCallback";
 import { track } from "@/lib/firebase";
-import Collection from "@/pages/Collection";
-import FAQ from "@/pages/FAQ";
-import Contact from "@/pages/Contact";
-import TrackOrder from "@/pages/TrackOrder";
-import CookiePreferences from "@/pages/CookiePreferences";
-import { About, ShippingPolicy, RefundPolicy, CancellationPolicy, PrivacyPolicy, TermsOfService } from "@/pages/StaticPages";
+const Header = lazy(() => import("@/components/Header").then(module => ({ default: module.Header })));
+const CartDrawer = lazy(() => import("@/components/CartDrawer").then(module => ({ default: module.CartDrawer })));
+const Footer = lazy(() => import("@/components/Footer").then(module => ({ default: module.Footer })));
+const Home = lazy(() => import("@/pages/Home"));
+const Shop = lazy(() => import("@/pages/Shop"));
+const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
+const Checkout = lazy(() => import("@/pages/Checkout"));
+const Orders = lazy(() => import("@/pages/Orders"));
+const OrderDetail = lazy(() => import("@/pages/OrderDetail"));
+const PaymentSuccess = lazy(() => import("@/pages/PaymentResult").then(module => ({ default: module.PaymentSuccess })));
+const PaymentFailed = lazy(() => import("@/pages/PaymentResult").then(module => ({ default: module.PaymentFailed })));
+const PaymentPending = lazy(() => import("@/pages/PaymentResult").then(module => ({ default: module.PaymentPending })));
+const AdminOrderDetail = lazy(() => import("@/pages/AdminOrders").then(module => ({ default: module.AdminOrderDetail })));
+const Login = lazy(() => import("@/pages/Login"));
+const AuthCallback = lazy(() => import("@/pages/AuthCallback"));
+const Collection = lazy(() => import("@/pages/Collection"));
+const FAQ = lazy(() => import("@/pages/FAQ"));
+const Contact = lazy(() => import("@/pages/Contact"));
+const TrackOrder = lazy(() => import("@/pages/TrackOrder"));
+const CookiePreferences = lazy(() => import("@/pages/CookiePreferences"));
+const About = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.About })));
+const ShippingPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.ShippingPolicy })));
+const RefundPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.RefundPolicy })));
+const CancellationPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.CancellationPolicy })));
+const PrivacyPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.PrivacyPolicy })));
+const TermsOfService = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.TermsOfService })));
 
 function LenisWrapper({ children }) {
   useEffect(() => {
@@ -114,7 +121,7 @@ function App() {
         <CartProvider>
           <BrowserRouter>
             <LenisWrapper>
-              <AppRouter />
+              <Suspense fallback={<div className="admin-loading" role="status">Loading page…</div>}><AppRouter /></Suspense>
             </LenisWrapper>
           </BrowserRouter>
         </CartProvider>
