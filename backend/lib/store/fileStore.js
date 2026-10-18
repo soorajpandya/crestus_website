@@ -24,6 +24,7 @@ function createFileStore({ dataDir }) {
 
   let orders = readJson(ordersFile, {});
   let meta = readJson(metaFile, {});
+  let orderRevision = 0;
   const persist = () => writeJson(ordersFile, orders);
   const clone = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
 
@@ -31,12 +32,14 @@ function createFileStore({ dataDir }) {
 
   return {
     driver: "file",
+    get orderRevision() { return orderRevision; },
     async getOrder(orderId) {
       return clone(orders[orderId] || null);
     },
     async putOrder(order) {
       orders[order.order_id] = clone(order);
       persist();
+      orderRevision++;
       return clone(order);
     },
     // Atomic read-modify-write. mutator(order) returns the new order, or null to leave it untouched.
@@ -48,6 +51,7 @@ function createFileStore({ dataDir }) {
         if (!next) return current;
         orders[orderId] = clone(next);
         persist();
+        orderRevision++;
         return clone(next);
       });
     },
@@ -93,6 +97,7 @@ function createFileStore({ dataDir }) {
     },
     async _reset() {
       orders = {};
+      orderRevision++;
       meta = {};
       persist();
       writeJson(metaFile, meta);

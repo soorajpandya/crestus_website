@@ -1,23 +1,31 @@
 // Firestore-backed store (firebase-admin). Orders live in `orders/{order_id}`; small key/value state in `meta/{key}`.
 const { isHistoricalImport } = require('../historicalImport');
+const { ORDER_SUMMARY_FIELDS } = require('../admin');
 function createFirestoreStore({ db }) {
   const orders = db.collection("orders");
   const metaCol = db.collection("meta");
   const snapToList = (snap) => snap.docs.map((d) => d.data());
+  let orderRevision = 0;
 
   return {
     driver: "firestore",
+    get orderRevision() { return orderRevision; },
+    async listOrderSummaries() {
+      const snap = await orders.select(...ORDER_SUMMARY_FIELDS).get();
+      return snap.docs.map(doc => ({ ...doc.data(), order_id: doc.data().order_id || doc.id }));
+    },
     async getOrder(orderId) {
       const doc = await orders.doc(orderId).get();
       return doc.exists ? doc.data() : null;
     },
     async putOrder(order) {
       await orders.doc(order.order_id).set(order);
+      orderRevision++;
       return order;
     },
     async updateOrder(orderId, mutator) {
       const ref = orders.doc(orderId);
-      return db.runTransaction(async (tx) => {
+      const result = await db.runTransaction(async (tx) => {
         const doc = await tx.get(ref);
         if (!doc.exists) return null;
         const current = doc.data();
@@ -26,6 +34,8 @@ function createFirestoreStore({ db }) {
         tx.set(ref, next);
         return next;
       });
+      orderRevision++;
+      return result;
     },
     async listOrdersForUser({ userId, email }) {
       const results = new Map();
