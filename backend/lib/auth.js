@@ -1,6 +1,22 @@
 const { initFirebaseAdmin } = require("./store");
 const { isHistoricalImport } = require('./historicalImport');
 
+// Follow every Firebase page and expose only directory fields, never password hashes or claims.
+async function listDirectoryUsers(firebaseAuth) {
+  const users = [];
+  let pageToken;
+  do {
+    const page = await firebaseAuth.listUsers(1000, pageToken);
+    users.push(...page.users.map(user => ({
+      id: user.uid, name: user.displayName || '', email: user.email || '', phone: user.phoneNumber || '',
+      registered: true, disabled: user.disabled === true, email_verified: user.emailVerified === true,
+      created_at: user.metadata?.creationTime || null, last_sign_in_at: user.metadata?.lastSignInTime || null,
+    })));
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return users;
+}
+
 // Verifies Firebase ID tokens. Admin = custom claim `admin` or a verified ADMIN_EMAILS address.
 function createAuth(config) {
   const app = initFirebaseAdmin(config);
@@ -55,7 +71,9 @@ function createAuth(config) {
           (user.emailVerified === true && user.email && (order.customer?.email || "").toLowerCase() === user.email))
     );
 
-  return { requireAuth, requireAdmin, ownsOrder, isAdminIdentity, enabled: Boolean(admin) || config.allowInsecureDevAuth };
+  return { requireAuth, requireAdmin, ownsOrder, isAdminIdentity, enabled: Boolean(admin) || config.allowInsecureDevAuth,
+    listUsers: () => admin ? listDirectoryUsers(admin.auth(app)) : Promise.resolve(null),
+  };
 }
 
-module.exports = { createAuth };
+module.exports = { createAuth, listDirectoryUsers };
