@@ -1,4 +1,5 @@
 // Firestore-backed store (firebase-admin). Orders live in `orders/{order_id}`; small key/value state in `meta/{key}`.
+const { isHistoricalImport } = require('../historicalImport');
 function createFirestoreStore({ db }) {
   const orders = db.collection("orders");
   const metaCol = db.collection("meta");
@@ -34,14 +35,14 @@ function createFirestoreStore({ db }) {
       if (email) {
         snapToList(await orders.where("customer.email", "==", email.toLowerCase()).get()).forEach((o) => results.set(o.order_id, o));
       }
-      return Array.from(results.values()).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      return Array.from(results.values()).filter(o => !isHistoricalImport(o)).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
     },
     async listOrders({ limit = 100, paymentStatus, fulfillmentStatus } = {}) {
       let q = orders;
       if (paymentStatus) q = q.where("payment.status", "==", paymentStatus);
       if (fulfillmentStatus) q = q.where("fulfillment.status", "==", fulfillmentStatus);
       const list = snapToList(await q.get());
-      return list.sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, limit);
+      return list.sort((a, b) => ((a.created_at || a.payment?.observed_success_transaction_time || a.imported_at || '') < (b.created_at || b.payment?.observed_success_transaction_time || b.imported_at || '') ? 1 : -1)).slice(0, limit);
     },
     async findOrderByAwb(awb) {
       const snap = await orders.where("shipment.awb_code", "==", awb).limit(1).get();

@@ -1,6 +1,7 @@
 // Shipment tracking: Shiprocket status mapping, idempotent event ingestion, webhook handling and polling.
 const crypto = require("crypto");
 const { now } = require("./orders");
+const { requireOperationalOrder } = require('./historicalImport');
 
 // Shiprocket shipment status ids → customer-friendly status. Raw values are always preserved alongside.
 const STATUS_BY_ID = {
@@ -162,6 +163,7 @@ function createTrackingService({ config, store, shiprocket, logger = console, on
   }
 
   async function refreshFromProvider(order) {
+    requireOperationalOrder(order);
     if (!order.shipment.awb_code || !shiprocket.enabled) return { changed: false };
     const data = await shiprocket.trackAwb(order.shipment.awb_code);
     const td = data?.tracking_data || {};

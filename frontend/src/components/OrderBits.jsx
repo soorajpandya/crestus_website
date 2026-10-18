@@ -52,7 +52,7 @@ export function PriceBreakdown({ totals }) {
     <div className="space-y-2">
       {row("Subtotal", inr(totals.subtotal))}
       {totals.discount > 0 && row("You saved", `− ${inr(totals.discount)}`)}
-      {row("Shipping", totals.shipping > 0 ? inr(totals.shipping) : "Free")}
+      {row("Shipping", totals.shipping == null ? "Unknown" : totals.shipping > 0 ? inr(totals.shipping) : "Free")}
       {totals.tax_included > 0 && row(`Includes GST (${totals.tax_rate_percent}%)`, inr(totals.tax_included))}
       {row("Total", inr(totals.total), true)}
     </div>

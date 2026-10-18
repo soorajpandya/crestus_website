@@ -1,6 +1,10 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, logEvent, isSupported } from "firebase/analytics";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  sendPasswordResetEmail, sendEmailVerification,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -22,6 +26,10 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const signInWithEmail = (email, password) => signInWithEmailAndPassword(auth, email.trim(), password);
+export const createEmailAccount = (email, password) => createUserWithEmailAndPassword(auth, email.trim(), password);
+export const resetEmailPassword = (email) => sendPasswordResetEmail(auth, email.trim());
+export const verifyEmail = () => sendEmailVerification(auth.currentUser);
 export const logOut = () => signOut(auth);
 
 let analytics = null;

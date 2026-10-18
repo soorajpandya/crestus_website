@@ -1,12 +1,16 @@
 const { initFirebaseAdmin } = require("./store");
+const { isHistoricalImport } = require('./historicalImport');
 
-// Verifies Firebase ID tokens (Authorization: Bearer <idToken>). Admin = custom claim `admin` or ADMIN_EMAILS.
+// Verifies Firebase ID tokens. Admin = custom claim `admin` or a verified ADMIN_EMAILS address.
 function createAuth(config) {
   const app = initFirebaseAdmin(config);
   const admin = app ? require("firebase-admin") : null;
 
   const isAdminIdentity = (identity) =>
-    Boolean(identity && (identity.claims?.admin === true || config.adminEmails.includes((identity.email || "").toLowerCase())));
+    Boolean(identity && (
+      identity.claims?.admin === true ||
+      (identity.emailVerified === true && config.adminEmails.includes((identity.email || "").toLowerCase()))
+    ));
 
   async function identify(req) {
     const header = req.headers.authorization || "";
@@ -14,13 +18,14 @@ function createAuth(config) {
     if (token && admin) {
       try {
         const decoded = await admin.auth(app).verifyIdToken(token);
-        return { uid: decoded.uid, email: (decoded.email || "").toLowerCase(), claims: decoded, verified: true };
+        return { uid: decoded.uid, email: (decoded.email || "").toLowerCase(), claims: decoded, emailVerified: decoded.email_verified === true, verified: true };
       } catch {
         return null;
       }
     }
     if (!admin && config.allowInsecureDevAuth && req.headers["x-dev-uid"]) {
-      return { uid: String(req.headers["x-dev-uid"]), email: String(req.headers["x-dev-email"] || "").toLowerCase(), claims: {}, verified: false };
+      // This explicit development-only escape hatch models a trusted email identity.
+      return { uid: String(req.headers["x-dev-uid"]), email: String(req.headers["x-dev-email"] || "").toLowerCase(), claims: {}, emailVerified: true, verified: false };
     }
     return null;
   }
@@ -45,8 +50,9 @@ function createAuth(config) {
     Boolean(
       user &&
         order &&
+        !isHistoricalImport(order) &&
         ((order.user_id && order.user_id === user.uid) ||
-          (user.email && (order.customer?.email || "").toLowerCase() === user.email))
+          (user.emailVerified === true && user.email && (order.customer?.email || "").toLowerCase() === user.email))
     );
 
   return { requireAuth, requireAdmin, ownsOrder, isAdminIdentity, enabled: Boolean(admin) || config.allowInsecureDevAuth };

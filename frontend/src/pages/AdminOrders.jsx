@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft, FileText, RefreshCw, Truck, XCircle, IndianRu
 import api, { apiErrorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { inr, fmtDate } from "../lib/orderUi";
+import { adminPath } from '../lib/adminUi';
 import { OrderItems, PriceBreakdown, AddressBlock, PaymentBadge, FulfillmentBadge, ShipmentTimeline } from "../components/OrderBits";
 
 const STAGES = ["serviceability", "create_order", "assign_awb", "pickup", "manifest", "label", "invoice"];
@@ -20,12 +21,12 @@ const JOB_STYLE = {
 };
 
 function useAdminGate() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, roleLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
     if (!loading && !user) navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, { replace: true });
   }, [user, loading, navigate]);
-  return { ready: !loading && Boolean(user), isAdmin };
+  return { ready: !loading && !roleLoading && Boolean(user), isAdmin };
 }
 
 function Forbidden() {
@@ -93,7 +94,8 @@ export function AdminOrders() {
                 <tr key={o.order_id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
                   <td className="px-4 py-3">
                     <Link to={`/admin/orders/${o.order_id}`} className="font-mono text-xs text-brand-magenta hover:underline">{o.order_id}</Link>
-                    <p className="text-[11px] text-zinc-400">{fmtDate(o.created_at)}</p>
+                    <p className="text-[11px] text-zinc-400">{fmtDate(o.created_at) || "Creation time unknown"}</p>
+                    {o.record_kind === "historical_wallet_deposit" && <p className="text-[11px] text-zinc-500">Historical wallet deposit</p>}
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-semibold">{o.customer?.name}</p>
@@ -157,14 +159,15 @@ export function AdminOrderDetail() {
 
   const f = order.fulfillment || {};
   const s = order.shipment || {};
-  const canRetry = order.payment.status === "paid" && !["completed", "cancelled"].includes(f.status);
-  const canCancel = s.sr_order_id && f.status !== "cancelled" && !["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(order.tracking?.status);
+  const historical = order.record_kind === "historical_wallet_deposit" || order.import_metadata?.side_effects_disabled === true;
+  const canRetry = !historical && order.payment.status === "paid" && !["completed", "cancelled"].includes(f.status);
+  const canCancel = !historical && s.sr_order_id && f.status !== "cancelled" && !["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(order.tracking?.status);
   const refunded = (order.payment.refunds || []).reduce((sum, r) => sum + Number(r.amount), 0);
-  const refundable = Math.max(0, Number(order.payment.amount_paid || 0) - refunded);
+  const refundable = historical ? 0 : Math.max(0, Number(order.payment.amount_paid || 0) - refunded);
 
   return (
     <div data-testid="admin-order-detail" className="max-w-6xl mx-auto px-6 lg:px-10 pt-28 pb-24 min-h-screen">
-      <Link to="/admin/orders" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-500 hover:text-ink transition-colors">
+      <Link to={adminPath('/orders')} className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-500 hover:text-ink transition-colors">
         <ArrowLeft size={14} /> All orders
       </Link>
       <div className="flex flex-wrap items-end justify-between gap-4 mt-4 mb-8">
@@ -195,6 +198,15 @@ export function AdminOrderDetail() {
         </div>
       )}
 
+      {historical && (
+        <div className="mb-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm space-y-2" data-testid="historical-import-notice">
+          <p className="font-semibold">Historical wallet deposit imported from a Cashfree CSV</p>
+          <p>{order.description}</p>
+          <p>Original order creation time, merchandise, tax and delivery details are unknown. Payment and shipping actions are disabled.</p>
+          <p>Imported {fmtDate(order.imported_at)} · {order.source_row_refs?.length || 0} payment attempts</p>
+          <p>Paid: {inr(order.payment.amount_paid)} · Source settlement statuses: {Object.entries(order.payment.settlement_status_counts || {}).map(([k,v]) => `${k}: ${v}`).join(', ')}</p>
+        </div>
+      )}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <section className="rounded-2xl border border-zinc-200 p-5">
@@ -214,7 +226,7 @@ export function AdminOrderDetail() {
                 ["Quoted courier rate", s.selected_courier_rate != null ? inr(s.selected_courier_rate) : null],
                 ["Shipping charged", inr(order.totals.shipping)],
                 ["Rate variance", s.shipping_cost_variance != null ? inr(s.shipping_cost_variance) : null],
-                ["Package", `${order.package.weight_kg} kg · ${order.package.length_cm}×${order.package.breadth_cm}×${order.package.height_cm} cm`],
+                ["Package", order.package ? `${order.package.weight_kg} kg · ${order.package.length_cm}×${order.package.breadth_cm}×${order.package.height_cm} cm` : null],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-zinc-100 py-1">
                   <dt className="text-zinc-500">{k}</dt>
@@ -226,13 +238,15 @@ export function AdminOrderDetail() {
 
           <section className="rounded-2xl border border-zinc-200 p-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Tracking</p>
-            <ShipmentTimeline tracking={order.tracking} fulfillmentStatus={order.customer_fulfillment_status} />
+            <p className="text-sm text-zinc-500">{historical ? "Delivery is not applicable to this wallet deposit." : null}</p>
+            {!historical && <ShipmentTimeline tracking={order.tracking} fulfillmentStatus={order.customer_fulfillment_status} />}
             <p className="text-[11px] text-zinc-400 mt-4">Raw provider status: {order.tracking?.raw_status || "—"} ({order.tracking?.raw_status_id ?? "—"}) · last event {fmtDate(order.tracking?.last_event_at) || "—"}</p>
           </section>
 
           <section className="rounded-2xl border border-zinc-200 p-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Items</p>
             <OrderItems items={order.items} />
+            {historical && !order.items?.length && <p className="text-sm text-zinc-500">Merchandise details were not supplied.</p>}
           </section>
 
           <section className="rounded-2xl border border-zinc-200 p-5">
@@ -250,7 +264,7 @@ export function AdminOrderDetail() {
         <div className="space-y-6">
           <section className="rounded-2xl border border-zinc-200 p-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Actions</p>
-            <button disabled={Boolean(busy)} onClick={() => act("Payment re-check", () => api.post(`/admin/orders/${orderId}/payment/verify`))} className="w-full inline-flex items-center justify-center gap-2 border border-zinc-300 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors disabled:opacity-50">
+            <button disabled={Boolean(busy) || historical} onClick={() => act("Payment re-check", () => api.post(`/admin/orders/${orderId}/payment/verify`))} className="w-full inline-flex items-center justify-center gap-2 border border-zinc-300 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors disabled:opacity-50">
               <RefreshCw size={14} /> Re-verify payment with Cashfree
             </button>
             {canRetry && (

@@ -13,6 +13,8 @@ const { createTrackingService } = require("./lib/tracking");
 const { createFulfillmentService } = require("./lib/fulfillment");
 const pricing = require("./lib/pricing");
 const { createOrderDocument, toCustomerView, toPublicTrackingView, toAdminView } = require("./lib/orders");
+const { isHistoricalImport, requireOperationalOrder } = require('./lib/historicalImport');
+const adminReports = require('./lib/admin');
 
 function loadProducts() {
   const local = path.join(__dirname, "products.json");
@@ -225,7 +227,7 @@ function createApp(overrides = {}) {
     "/api/orders",
     auth.requireAuth,
     asyncRoute(async (req, res) => {
-      const list = await store.listOrdersForUser({ userId: req.user.uid, email: req.user.email });
+      const list = await store.listOrdersForUser({ userId: req.user.uid, email: req.user.emailVerified ? req.user.email : null });
       res.json(list.map(toCustomerView));
     })
   );
@@ -236,7 +238,7 @@ function createApp(overrides = {}) {
       const email = String(req.query.email || "").trim().toLowerCase();
       const phone = String(req.query.phone || "").replace(/\D/g, "").slice(-10);
       const order = await store.getOrder(req.params.order_id);
-      const matches = order && ((email && order.customer.email === email) || (phone && order.customer.phone === phone));
+      const matches = order && !isHistoricalImport(order) && ((email && order.customer.email === email) || (phone && order.customer.phone === phone));
       if (!matches) return res.status(404).json({ detail: "Order not found. Check the order ID and the email/phone used at checkout." });
       res.json(toPublicTrackingView(order));
     })
@@ -291,16 +293,37 @@ function createApp(overrides = {}) {
   // ---- admin --------------------------------------------------------------
   const admin = express.Router();
   admin.use(auth.requireAdmin);
+  admin.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   admin.param("order_id", normaliseOrderParam);
+  admin.get('/overview', asyncRoute(async (_req, res) => {
+    res.json(adminReports.overview(await store.listOrders({ limit: Infinity }), products));
+  }));
+  admin.get('/customers', asyncRoute(async (_req, res) => {
+    res.json(adminReports.customerRecords(await store.listOrders({ limit: Infinity })));
+  }));
+  admin.get('/catalog', (_req, res) => res.json(products));
+  admin.get('/settings', (_req, res) => res.json({
+    storefront_url: config.frontendUrl,
+    admin_url: 'https://admin.crestuseccommerce.store',
+    authentication: auth.enabled ? 'configured' : 'not_configured',
+    order_store: store.driver,
+    payments: config.cashfree.appId && config.cashfree.secretKey ? (config.cashfree.sandbox ? 'sandbox' : 'production') : 'not_configured',
+    shipping: shiprocket.enabled ? (shiprocket.mock ? 'mock' : 'live') : 'disabled',
+  }));
   admin.get(
     "/orders",
     asyncRoute(async (req, res) => {
+      if (req.query.page !== undefined) {
+        const result = adminReports.orderPage(await store.listOrders({ limit: Infinity }), req.query);
+        return res.json({ ...result, items: result.items.map(toAdminView) });
+      }
       const list = await store.listOrders({ limit: Math.min(Number(req.query.limit) || 100, 500), paymentStatus: req.query.payment_status || undefined, fulfillmentStatus: req.query.fulfillment_status || undefined });
       res.json(list.map(toAdminView));
     })
   );
   const adminOrder = async (req, res) => {
     const order = await store.getOrder(req.params.order_id);
+    if (req.method !== 'GET') requireOperationalOrder(order);
     if (!order) res.status(404).json({ detail: "Order not found" });
     return order;
   };

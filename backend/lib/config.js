@@ -35,6 +35,7 @@ function loadConfig(env = process.env) {
       frontendUrl,
       "https://crestuseccommerce.store",
       "https://www.crestuseccommerce.store",
+      "https://admin.crestuseccommerce.store",
       "https://crestus.in",
       "https://www.crestus.in",
       "http://localhost:3000",

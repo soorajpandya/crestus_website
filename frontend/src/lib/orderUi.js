@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "./api";
 
-export const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+export const inr = (n) => n === null || n === undefined || n === '' || !Number.isFinite(Number(n)) ? 'Unknown' : `₹${Number(n).toLocaleString("en-IN")}`;
 
 export const PAYMENT_STYLE = {
   paid: "bg-emerald-100 text-emerald-700",
@@ -13,6 +13,9 @@ export const PAYMENT_STYLE = {
 };
 
 export const PAYMENT_LABEL = {
+  abandoned: "Not completed",
+  incomplete: "Incomplete in source report",
+  partially_paid: "Partially paid",
   paid: "Paid",
   pending: "Payment pending",
   failed: "Payment failed",

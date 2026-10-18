@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { withLock } = require("../lock");
+const { isHistoricalImport } = require('../historicalImport');
 
 // JSON-file backed store for local development and automated tests. Same interface as firestoreStore.
 function createFileStore({ dataDir }) {
@@ -53,6 +54,7 @@ function createFileStore({ dataDir }) {
     async listOrdersForUser({ userId, email }) {
       const target = (email || "").toLowerCase();
       return all()
+        .filter((o) => !isHistoricalImport(o))
         .filter((o) => (userId && o.user_id === userId) || (target && (o.customer?.email || "").toLowerCase() === target))
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
         .map(clone);

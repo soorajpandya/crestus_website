@@ -2,6 +2,7 @@
 const crypto = require("crypto");
 const { withLock } = require("./lock");
 const { now } = require("./orders");
+const { isHistoricalImport, requireOperationalOrder } = require('./historicalImport');
 
 const AMOUNT_TOLERANCE = 0.01;
 
@@ -45,6 +46,7 @@ function createPaymentService({ config, store, cashfree, logger = console, onPai
   }
 
   async function createPaymentSession(order) {
+    requireOperationalOrder(order);
     const attempt = await createCashfreeOrder(order, 1);
     const updated = await store.updateOrder(order.order_id, (o) => ({
       ...o,
@@ -74,6 +76,7 @@ function createPaymentService({ config, store, cashfree, logger = console, onPai
     return withLock(`pay:${orderId}`, async () => {
       const order = await store.getOrder(orderId);
       if (!order) return { found: false, paid: false, changed: false, order: null };
+      if (isHistoricalImport(order)) return { found: true, paid: order.payment.status === 'paid', changed: false, historical_import: true, order };
       if (order.payment.status === "paid" || order.payment.status === "refunded" || order.payment.status === "partially_refunded") {
         return { found: true, paid: true, changed: false, order };
       }
@@ -163,6 +166,7 @@ function createPaymentService({ config, store, cashfree, logger = console, onPai
 
   // Failed/abandoned attempts leave the Cashfree order ACTIVE; a new Cashfree order is created only when needed.
   async function retryPayment(orderId) {
+    requireOperationalOrder(await store.getOrder(orderId));
     const confirmed = await confirmPayment(orderId, { source: "retry" });
     if (!confirmed.found) return null;
     if (confirmed.paid) return { paid: true, order: confirmed.order };
@@ -224,6 +228,7 @@ function createPaymentService({ config, store, cashfree, logger = console, onPai
     const pending = await store.listPendingPayments();
     const cutoff = Date.now() - config.worker.paymentPendingTtlMs;
     for (const order of pending) {
+      if (isHistoricalImport(order)) continue;
       if (!order.payment.cashfree_order_id) continue;
       try {
         const res = await confirmPayment(order.order_id, { source: "reconcile" });
@@ -240,6 +245,7 @@ function createPaymentService({ config, store, cashfree, logger = console, onPai
     return withLock(`pay:${orderId}`, async () => {
       const order = await store.getOrder(orderId);
       if (!order) return null;
+      requireOperationalOrder(order);
       if (!["paid", "partially_refunded"].includes(order.payment.status)) {
         const e = new Error("Only paid orders can be refunded");
         e.status = 409;

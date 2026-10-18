@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Lenis from "lenis";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
@@ -15,7 +15,9 @@ import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
 import { PaymentSuccess, PaymentFailed, PaymentPending } from "@/pages/PaymentResult";
-import { AdminOrders, AdminOrderDetail } from "@/pages/AdminOrders";
+import { AdminOrderDetail } from "@/pages/AdminOrders";
+import { AdminLayout, AdminOverview, AdminOrdersPage, AdminCatalog, AdminCustomers, AdminSettings, AdminNotFound } from "@/pages/AdminPanel";
+import { isAdminHost } from "@/lib/adminUi";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import { track } from "@/lib/firebase";
@@ -28,6 +30,7 @@ import { About, ShippingPolicy, RefundPolicy, CancellationPolicy, PrivacyPolicy,
 
 function LenisWrapper({ children }) {
   useEffect(() => {
+    if (isAdminHost() || window.location.pathname.startsWith('/admin')) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
     const lenis = new Lenis({ duration: 1.15, smoothWheel: true });
@@ -47,12 +50,28 @@ function LenisWrapper({ children }) {
 
 function AppRouter() {
   const location = useLocation();
+  const adminHost = isAdminHost();
   useEffect(() => {
     track("page_view", { page_path: location.pathname + location.search, page_title: document.title });
   }, [location]);
   // Handle OAuth callback BEFORE normal routing (session_id arrives in URL fragment)
   if (location.hash?.includes("session_id=")) {
     return <AuthCallback />;
+  }
+  if (adminHost || location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
+    return <Routes>
+      {adminHost && <Route path="/login" element={<div className="admin-login"><a className="admin-login-back" href="https://crestuseccommerce.store">← Back to storefront</a><Login admin /><p className="admin-login-note">Crestus administration · Authorized accounts only</p></div>} />}
+      {adminHost && <Route path="/admin/*" element={<Navigate to="/" replace />} />}
+      <Route path={adminHost ? '/' : '/admin'} element={<AdminLayout />}>
+        <Route index element={<AdminOverview />} />
+        <Route path="orders" element={<AdminOrdersPage />} />
+        <Route path="orders/:order_id" element={<AdminOrderDetail />} />
+        <Route path="catalog" element={<AdminCatalog />} />
+        <Route path="customers" element={<AdminCustomers />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="*" element={<AdminNotFound />} />
+      </Route>
+    </Routes>;
   }
   return (
     <>
@@ -63,14 +82,13 @@ function AppRouter() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Login signup />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:order_id" element={<OrderDetail />} />
         <Route path="/success" element={<PaymentSuccess />} />
         <Route path="/failed" element={<PaymentFailed />} />
         <Route path="/pending" element={<PaymentPending />} />
-        <Route path="/admin/orders" element={<AdminOrders />} />
-        <Route path="/admin/orders/:order_id" element={<AdminOrderDetail />} />
         <Route path="/new-arrivals" element={<Collection type="new" />} />
         <Route path="/best-sellers" element={<Collection type="best" />} />
         <Route path="/faq" element={<FAQ />} />
