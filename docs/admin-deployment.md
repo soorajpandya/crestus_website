@@ -14,7 +14,7 @@ The order API supports `page`, `page_size` (maximum 100), `scope=storefront|hist
 
 1. Run `npm run build:admin` from the repository root. It uses the frontend environment (currently `REACT_APP_BACKEND_URL=https://crestus-api.onrender.com`) and produces `dist/admin/` plus `output/crestus-admin-hostinger.zip`.
 2. In Hostinger, select **crestuseccommerce.store → Domains → Subdomains**. Create **admin** with a dedicated document root such as `public_html/admin`. Keep the existing storefront root intact.
-3. Upload the archive **into that document root** and extract its contents there. `index.html`, `.htaccess`, `robots.txt`, `static/`, and `images/` must be directly inside the root. The SPA rewrite enables direct links such as `/orders/:id`.
+3. Upload the archive **into that document root** and extract its contents there. `index.html`, `.htaccess`, `robots.txt`, `static/`, and `images/` must be directly inside the root. `DirectoryIndex index.html` takes precedence over Hostinger's generated `default.php` placeholder. The SPA rewrite enables direct links such as `/orders/:id`.
 4. Ensure the subdomain's DNS points to the hosting account, activate its SSL certificate and use HTTPS.
 5. Add **admin.crestuseccommerce.store** under Firebase Authentication → Settings → Authorized domains. Email/password and Google sign-in use the existing Firebase project.
 

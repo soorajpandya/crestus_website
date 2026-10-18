@@ -13,7 +13,8 @@ const index = fs.readFileSync(path.join(target, 'index.html'), 'utf8')
   .replace('</head>', '<meta name="robots" content="noindex,nofollow"/><meta name="description" content="Crestus administrator workspace"/></head>');
 fs.writeFileSync(path.join(target, 'index.html'), index);
 fs.writeFileSync(path.join(target, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
-fs.writeFileSync(path.join(target, '.htaccess'), `Options -Indexes
+fs.writeFileSync(path.join(target, '.htaccess'), `DirectoryIndex index.html
+Options -Indexes
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
