@@ -99,7 +99,7 @@ export default function Checkout() {
   const [quote, setQuote] = useState(null);
   const [quoteState, setQuoteState] = useState("idle"); // idle | loading | ready | error
 
-  // Require Google Sign-In before placing order
+  // Require a Firebase session before placing an order
   useEffect(() => {
     if (!loading && !user) {
       navigate("/login?redirect=/checkout", { replace: true });
@@ -262,7 +262,7 @@ export default function Checkout() {
           </div>
         </div>
         <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/80">
-          ✓ Verified Google Account
+          ✓ Signed in securely
         </span>
       </div>
 

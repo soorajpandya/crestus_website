@@ -79,7 +79,7 @@ export function PrivacyPolicy() {
       <p>{COMPANY.legalName} ("we", "us") is committed to protecting your privacy. This policy explains what data we collect and how we use it when you use our e-commerce platform.</p>
       <h2>Information we collect</h2>
       <ul>
-        <li><strong>Account data</strong> — name, email address, and profile picture when you sign in with Google.</li>
+        <li><strong>Account data</strong> — your email address when you create an account with email and password, and your name and profile picture when you sign in with Google. Authentication is managed by Firebase.</li>
         <li><strong>Order data</strong> — delivery address, phone number, and purchase history.</li>
         <li><strong>Payment data</strong> — payments are processed securely by Razorpay; we never store your card, UPI, or banking details.</li>
         <li><strong>Usage data</strong> — device, browser, and interaction data to improve the shopping experience.</li>

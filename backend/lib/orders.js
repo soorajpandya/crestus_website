@@ -1,5 +1,6 @@
 // Order document factory and view serialisers (customer / public tracking / admin).
 const crypto = require("crypto");
+const { isHistoricalImport } = require('./historicalImport');
 
 const newOrderId = () => `ord_${Date.now()}${crypto.randomBytes(3).toString("hex")}`;
 const now = () => new Date().toISOString();
@@ -47,6 +48,7 @@ function createOrderDocument({ orderId, userId, customer, address, items, totals
 
 // Customer-facing fulfillment status, derived from payment + fulfillment + tracking.
 function customerFulfillmentStatus(order) {
+  if (isHistoricalImport(order)) return null;
   if (order.payment.status !== "paid" && !["refunded", "partially_refunded"].includes(order.payment.status)) return null;
   if (order.fulfillment.status === "cancelled") return "cancelled";
   if (order.tracking?.status && order.tracking.status !== "preparing") return order.tracking.status;

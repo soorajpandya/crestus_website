@@ -12,6 +12,11 @@ const api = axios.create({ baseURL, timeout: 30000 });
 
 // Every request carries the signed-in user's Firebase ID token; the backend verifies it and enforces ownership.
 api.interceptors.request.use(async (config) => {
+  // The API's free Render instance can take over 50 seconds to wake up.
+  // Keep admin access checks and reports alive through that first request.
+  if (config.url === '/auth/me' || /^\/?admin(?:\/|$)/.test(config.url || '')) {
+    config.timeout = 90000;
+  }
   const user = auth.currentUser;
   if (user) {
     try {

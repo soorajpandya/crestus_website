@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { withLock } = require("../lock");
+const { isHistoricalImport } = require('../historicalImport');
 
 // JSON-file backed store for local development and automated tests. Same interface as firestoreStore.
 function createFileStore({ dataDir }) {
@@ -23,6 +24,7 @@ function createFileStore({ dataDir }) {
 
   let orders = readJson(ordersFile, {});
   let meta = readJson(metaFile, {});
+  let orderRevision = 0;
   const persist = () => writeJson(ordersFile, orders);
   const clone = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
 
@@ -30,12 +32,14 @@ function createFileStore({ dataDir }) {
 
   return {
     driver: "file",
+    get orderRevision() { return orderRevision; },
     async getOrder(orderId) {
       return clone(orders[orderId] || null);
     },
     async putOrder(order) {
       orders[order.order_id] = clone(order);
       persist();
+      orderRevision++;
       return clone(order);
     },
     // Atomic read-modify-write. mutator(order) returns the new order, or null to leave it untouched.
@@ -47,12 +51,14 @@ function createFileStore({ dataDir }) {
         if (!next) return current;
         orders[orderId] = clone(next);
         persist();
+        orderRevision++;
         return clone(next);
       });
     },
     async listOrdersForUser({ userId, email }) {
       const target = (email || "").toLowerCase();
       return all()
+        .filter((o) => !isHistoricalImport(o))
         .filter((o) => (userId && o.user_id === userId) || (target && (o.customer?.email || "").toLowerCase() === target))
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
         .map(clone);
@@ -91,6 +97,7 @@ function createFileStore({ dataDir }) {
     },
     async _reset() {
       orders = {};
+      orderRevision++;
       meta = {};
       persist();
       writeJson(metaFile, meta);

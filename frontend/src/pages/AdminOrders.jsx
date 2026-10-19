@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, FileText, RefreshCw, Truck, XCircle, IndianRupee } from "lucide-react";
 import api, { apiErrorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { inr, fmtDate } from "../lib/orderUi";
+import { adminPath, JOB_LABEL, readableMessage } from '../lib/adminUi';
 import { OrderItems, PriceBreakdown, AddressBlock, PaymentBadge, FulfillmentBadge, ShipmentTimeline } from "../components/OrderBits";
 
 const STAGES = ["serviceability", "create_order", "assign_awb", "pickup", "manifest", "label", "invoice"];
@@ -20,12 +21,12 @@ const JOB_STYLE = {
 };
 
 function useAdminGate() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, roleLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
     if (!loading && !user) navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, { replace: true });
   }, [user, loading, navigate]);
-  return { ready: !loading && Boolean(user), isAdmin };
+  return { ready: !loading && !roleLoading && Boolean(user), isAdmin };
 }
 
 function Forbidden() {
@@ -93,7 +94,8 @@ export function AdminOrders() {
                 <tr key={o.order_id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
                   <td className="px-4 py-3">
                     <Link to={`/admin/orders/${o.order_id}`} className="font-mono text-xs text-brand-magenta hover:underline">{o.order_id}</Link>
-                    <p className="text-[11px] text-zinc-400">{fmtDate(o.created_at)}</p>
+                    <p className="text-[11px] text-zinc-400">{fmtDate(o.created_at) || "Creation time unknown"}</p>
+                    {o.record_kind === "historical_wallet_deposit" && <p className="text-[11px] text-zinc-500">Historical wallet deposit</p>}
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-semibold">{o.customer?.name}</p>
@@ -128,14 +130,18 @@ export function AdminOrderDetail() {
   const [stage, setStage] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
   const [reason, setReason] = useState("");
-
-  const load = useCallback(() => {
-    api.get(`/admin/orders/${orderId}`).then(({ data }) => setOrder(data)).catch((e) => setError(apiErrorMessage(e)));
-  }, [orderId]);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    if (ready && isAdmin) load();
-  }, [ready, isAdmin, load]);
+    if (!ready || !isAdmin) return;
+    let active = true;
+    setOrder(null);
+    setError('');
+    api.get(`/admin/orders/${encodeURIComponent(orderId)}`).then(({ data }) => {
+      if (active) setOrder(data);
+    }).catch(e => { if (active) setError(readableMessage(apiErrorMessage(e))); });
+    return () => { active = false; };
+  }, [ready, isAdmin, orderId, revision]);
 
   const act = async (label, fn) => {
     setBusy(label);
@@ -152,19 +158,20 @@ export function AdminOrderDetail() {
 
   if (!ready) return <div className="pt-40 text-center text-zinc-400 min-h-screen">Loading…</div>;
   if (!isAdmin) return <Forbidden />;
-  if (error) return <div className="pt-40 text-center text-rose-600 min-h-screen">{error}</div>;
+  if (error) return <div role="alert" className="admin-error"><p>{error}</p><button className="admin-button secondary" onClick={() => setRevision(value => value + 1)}>Try again</button></div>;
   if (!order) return <div className="pt-40 text-center text-zinc-400 min-h-screen">Loading…</div>;
 
   const f = order.fulfillment || {};
   const s = order.shipment || {};
-  const canRetry = order.payment.status === "paid" && !["completed", "cancelled"].includes(f.status);
-  const canCancel = s.sr_order_id && f.status !== "cancelled" && !["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(order.tracking?.status);
+  const historical = order.record_kind === "historical_wallet_deposit" || order.import_metadata?.side_effects_disabled === true;
+  const canRetry = !historical && order.payment.status === "paid" && !["completed", "cancelled"].includes(f.status);
+  const canCancel = !historical && s.sr_order_id && f.status !== "cancelled" && !["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(order.tracking?.status);
   const refunded = (order.payment.refunds || []).reduce((sum, r) => sum + Number(r.amount), 0);
-  const refundable = Math.max(0, Number(order.payment.amount_paid || 0) - refunded);
+  const refundable = historical ? 0 : Math.max(0, Number(order.payment.amount_paid || 0) - refunded);
 
   return (
-    <div data-testid="admin-order-detail" className="max-w-6xl mx-auto px-6 lg:px-10 pt-28 pb-24 min-h-screen">
-      <Link to="/admin/orders" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-500 hover:text-ink transition-colors">
+    <div data-testid="admin-order-detail" className="max-w-6xl mx-auto pb-12">
+      <Link to={adminPath('/orders')} className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-500 hover:text-ink transition-colors">
         <ArrowLeft size={14} /> All orders
       </Link>
       <div className="flex flex-wrap items-end justify-between gap-4 mt-4 mb-8">
@@ -176,17 +183,27 @@ export function AdminOrderDetail() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <PaymentBadge status={order.payment.status} />
-          <span className={`text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${JOB_STYLE[f.status] || ""}`}>job: {f.status?.replace("_", " ")}</span>
+          <span className={`text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${JOB_STYLE[f.status] || "bg-zinc-100 text-zinc-600"}`}>{JOB_LABEL[f.status] || 'Status unavailable'}</span>
           <FulfillmentBadge status={order.customer_fulfillment_status} />
           <span className="font-display text-2xl font-semibold">{inr(order.totals.total)}</span>
         </div>
       </div>
 
+      <section aria-label="Order status" className="rounded-2xl border border-zinc-200 bg-white p-5 mb-6">
+        <h2 className="font-semibold mb-3">Order status</h2>
+        <dl className="grid sm:grid-cols-3 gap-4 text-sm">
+          <div><dt className="text-zinc-500 mb-2">Payment</dt><dd><PaymentBadge status={order.payment.status} /><p className="mt-2">Collected: {inr(order.payment.amount_paid)}</p></dd></div>
+          <div><dt className="text-zinc-500 mb-2">Fulfillment</dt><dd>{historical ? 'Not applicable to a wallet deposit' : JOB_LABEL[f.status] || 'Status unavailable'}</dd></div>
+          <div><dt className="text-zinc-500 mb-2">Delivery</dt><dd>{historical ? 'Not applicable' : order.customer_fulfillment_status ? <FulfillmentBadge status={order.customer_fulfillment_status} /> : 'Awaiting payment'}{!historical && f.status === 'needs_attention' && <p className="text-rose-700 mt-2">Shipment needs administrator attention.</p>}</dd></div>
+        </dl>
+      </section>
+
       {f.status === "needs_attention" && f.last_error && (
         <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
-          <p className="font-semibold flex items-center gap-2"><AlertTriangle size={16} /> Fulfillment stopped at stage “{f.last_error.stage}” ({f.last_error.code})</p>
-          <p className="mt-1">{f.last_error.message}</p>
-          {f.last_error.data && <pre className="mt-3 text-[11px] bg-white/70 rounded-lg p-3 overflow-x-auto">{JSON.stringify(f.last_error.data, null, 2)}</pre>}
+          <p className="font-semibold flex items-center gap-2"><AlertTriangle size={16} /> Shipment needs attention</p>
+          <p className="mt-1">{readableMessage(f.last_error.message || f.last_error.data)}</p>
+          <p className="mt-2">Review the issue, then retry fulfillment when it has been resolved.</p>
+          <details className="mt-3"><summary className="cursor-pointer text-xs font-semibold">Technical details</summary><p className="text-xs mt-2">Stage: {f.last_error.stage || 'Unknown'} · Code: {f.last_error.code || 'Unknown'}</p>{f.last_error.data && <pre className="mt-3 text-[11px] bg-white/70 rounded-lg p-3 overflow-x-auto">{JSON.stringify(f.last_error.data, null, 2)}</pre>}</details>
         </div>
       )}
       {order.alerts?.some((a) => a.type === "payment_amount_mismatch") && (
@@ -195,6 +212,15 @@ export function AdminOrderDetail() {
         </div>
       )}
 
+      {historical && (
+        <div className="mb-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm space-y-2" data-testid="historical-import-notice">
+          <p className="font-semibold">Historical wallet deposit imported from a Cashfree CSV</p>
+          <p>{order.description}</p>
+          <p>Original order creation time, merchandise, tax and delivery details are unknown. Payment and shipping actions are disabled.</p>
+          <p>Imported {fmtDate(order.imported_at)} · {order.source_row_refs?.length || 0} payment attempts</p>
+          <p>Paid: {inr(order.payment.amount_paid)} · Source settlement statuses: {Object.entries(order.payment.settlement_status_counts || {}).map(([k,v]) => `${k.replace(/_/g, ' ').toLowerCase()}: ${v}`).join(', ') || 'Unavailable'}</p>
+        </div>
+      )}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <section className="rounded-2xl border border-zinc-200 p-5">
@@ -214,7 +240,7 @@ export function AdminOrderDetail() {
                 ["Quoted courier rate", s.selected_courier_rate != null ? inr(s.selected_courier_rate) : null],
                 ["Shipping charged", inr(order.totals.shipping)],
                 ["Rate variance", s.shipping_cost_variance != null ? inr(s.shipping_cost_variance) : null],
-                ["Package", `${order.package.weight_kg} kg · ${order.package.length_cm}×${order.package.breadth_cm}×${order.package.height_cm} cm`],
+                ["Package", order.package ? `${order.package.weight_kg} kg · ${order.package.length_cm}×${order.package.breadth_cm}×${order.package.height_cm} cm` : null],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-zinc-100 py-1">
                   <dt className="text-zinc-500">{k}</dt>
@@ -226,13 +252,15 @@ export function AdminOrderDetail() {
 
           <section className="rounded-2xl border border-zinc-200 p-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Tracking</p>
-            <ShipmentTimeline tracking={order.tracking} fulfillmentStatus={order.customer_fulfillment_status} />
-            <p className="text-[11px] text-zinc-400 mt-4">Raw provider status: {order.tracking?.raw_status || "—"} ({order.tracking?.raw_status_id ?? "—"}) · last event {fmtDate(order.tracking?.last_event_at) || "—"}</p>
+            <p className="text-sm text-zinc-500">{historical ? "Delivery is not applicable to this wallet deposit." : null}</p>
+            {!historical && <ShipmentTimeline tracking={order.tracking} fulfillmentStatus={order.customer_fulfillment_status} />}
+            {!historical && <p className="text-[11px] text-zinc-400 mt-4">Last tracking update: {fmtDate(order.tracking?.last_event_at) || 'No updates yet'}</p>}
           </section>
 
           <section className="rounded-2xl border border-zinc-200 p-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Items</p>
             <OrderItems items={order.items} />
+            {historical && !order.items?.length && <p className="text-sm text-zinc-500">Merchandise details were not supplied.</p>}
           </section>
 
           <section className="rounded-2xl border border-zinc-200 p-5">
@@ -240,7 +268,7 @@ export function AdminOrderDetail() {
             <ul className="space-y-1 text-xs font-mono">
               {(f.history || []).slice().reverse().map((h, i) => (
                 <li key={i} className={h.ok ? "text-zinc-600" : "text-rose-600"}>
-                  {fmtDate(h.at)} · {h.stage} · {h.ok ? "ok" : "failed"}{h.message ? ` · ${h.message}` : ""}
+                  {fmtDate(h.at)} · {h.stage} · {h.ok ? "Completed" : "Failed"}{h.message ? ` · ${readableMessage(h.message)}` : ""}
                 </li>
               ))}
             </ul>
@@ -250,15 +278,15 @@ export function AdminOrderDetail() {
         <div className="space-y-6">
           <section className="rounded-2xl border border-zinc-200 p-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Actions</p>
-            <button disabled={Boolean(busy)} onClick={() => act("Payment re-check", () => api.post(`/admin/orders/${orderId}/payment/verify`))} className="w-full inline-flex items-center justify-center gap-2 border border-zinc-300 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors disabled:opacity-50">
+            <button disabled={Boolean(busy) || historical} onClick={() => act("Payment re-check", () => api.post(`/admin/orders/${orderId}/payment/verify`))} className="w-full inline-flex items-center justify-center gap-2 border border-zinc-300 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors disabled:opacity-50">
               <RefreshCw size={14} /> Re-verify payment with Cashfree
             </button>
             {canRetry && (
               <div className="space-y-2 pt-2">
                 <select value={stage} onChange={(e) => setStage(e.target.value)} className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-xs">
-                  <option value="">Resume from current stage ({f.stage || "start"})</option>
+                  <option value="" label={`Resume from current stage (${f.stage || 'start'})`} />
                   {STAGES.map((st) => (
-                    <option key={st} value={st}>Restart from: {st}</option>
+                    <option key={st} value={st} label={`Restart from: ${st}`} />
                   ))}
                 </select>
                 <button disabled={Boolean(busy)} onClick={() => act("Fulfillment retry", () => api.post(`/admin/orders/${orderId}/fulfillment/retry`, stage ? { stage } : {}))} className="w-full inline-flex items-center justify-center gap-2 bg-ink text-white px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors disabled:opacity-50">

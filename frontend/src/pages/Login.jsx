@@ -1,16 +1,36 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, ShoppingBag, Truck, Lock } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { authErrorMessage, authRedirect } from "../lib/authUi";
+import { LOGIN, REGISTER } from "../constants/testIds/auth";
 
-export default function Login() {
-  const { user, loading, login } = useAuth();
+export default function Login({ signup = false, admin = false }) {
+  const { user, loading, login, loginWithEmail, signupWithEmail, resetPassword } = useAuth();
   const { count } = useCart();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get("redirect") || "/shop";
-  const [signingIn, setSigningIn] = useState(false);
+  const redirectUrl = authRedirect(searchParams.get("redirect") || (admin ? '/' : null));
+  const [pending, setPending] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const signingIn = pending === "google";
+  const busy = Boolean(pending);
+  const ids = signup ? REGISTER : LOGIN;
+  const switchUrl = `${signup ? "/login" : "/signup"}?${new URLSearchParams({ redirect: redirectUrl })}`;
+
+  useEffect(() => {
+    setError("");
+    setNotice("");
+    setPassword("");
+    setConfirmation("");
+    setResetting(false);
+  }, [signup]);
 
   const isCheckoutRedirect = redirectUrl.includes("/checkout");
 
@@ -22,15 +42,43 @@ export default function Login() {
 
   const handleSignIn = async () => {
     try {
-      setSigningIn(true);
+      setPending("google");
+      setError("");
+      setNotice("");
       const res = await login();
       if (res) {
         navigate(redirectUrl, { replace: true });
       }
-    } catch {
-      // Errors and toasts handled in AuthContext
+    } catch (error) {
+      setError(authErrorMessage(error));
     } finally {
-      setSigningIn(false);
+      setPending("");
+    }
+  };
+
+  const handleEmailSubmit = async (event) => {
+    event.preventDefault();
+    if (busy) return;
+    setError("");
+    setNotice("");
+    if (signup && !resetting && password !== confirmation) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setPending("email");
+    try {
+      if (resetting) {
+        const recipient = email.trim();
+        await resetPassword(recipient);
+        setNotice(`If an account uses ${recipient}, you'll receive a password reset link from noreply@crestus-6f962.firebaseapp.com. The subject may say “Reset your password for project-854907499926”. Allow a few minutes and check your spam folder.`);
+      } else {
+        await (signup ? signupWithEmail(email, password) : loginWithEmail(email, password));
+        navigate(redirectUrl, { replace: true });
+      }
+    } catch (error) {
+      setError(authErrorMessage(error));
+    } finally {
+      setPending("");
     }
   };
 
@@ -41,13 +89,6 @@ export default function Login() {
   return (
     <div data-testid="login-page" className="min-h-screen pt-28 pb-20 px-6 flex items-center justify-center bg-gradient-to-b from-white via-zinc-50/50 to-white">
       <div className="w-full max-w-md">
-        <Link
-          to="/shop"
-          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-500 hover:text-brand-magenta transition-colors mb-8"
-        >
-          <ArrowLeft size={14} /> Back to shopping
-        </Link>
-
         <div className="bg-white border border-zinc-200/90 rounded-3xl p-8 sm:p-10 shadow-xl shadow-zinc-950/5 text-center relative overflow-hidden">
           {/* Subtle decorative glow */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-magenta/5 rounded-full blur-3xl pointer-events-none" />
@@ -61,12 +102,16 @@ export default function Login() {
 
           {/* Headline */}
           <h1 className="font-display font-semibold text-2xl sm:text-3xl tracking-tight text-zinc-900 mb-2">
-            {isCheckoutRedirect ? "Sign in to place your order" : "Welcome to CRESTUS"}
+            {resetting ? "Reset your password" : admin ? "Sign in to your workspace" : signup ? "Create your account" : isCheckoutRedirect ? "Sign in to place your order" : "Welcome to CRESTUS"}
           </h1>
           <p className="text-sm text-zinc-500 mb-8 max-w-sm mx-auto leading-relaxed">
-            {isCheckoutRedirect
-              ? "Please sign in with your Google account to complete your checkout and secure your delivery address."
-              : "Sign in with Google to access your user-isolated bag, past orders, and personalized shopping."}
+            {resetting
+              ? "Enter your email and we'll send you a link to choose a new password."
+              : admin
+                ? "Use your authorized administrator account to manage your Crestus store."
+              : signup
+                ? "Sign up with your email and password, or continue with Google."
+                : "Sign in with your email and password or Google to access your bag and orders."}
           </p>
 
           {isCheckoutRedirect && count > 0 && (
@@ -78,11 +123,55 @@ export default function Login() {
             </div>
           )}
 
+          {error && <p role="alert" className="mb-5 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 text-left">{error}</p>}
+          {notice && <p role="status" className="mb-5 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 text-left">{notice}</p>}
+
+          <form onSubmit={handleEmailSubmit} className="space-y-4 text-left">
+            <fieldset disabled={busy} className="space-y-4 disabled:opacity-60">
+              <div>
+                <label htmlFor="auth-email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email address</label>
+                <input id="auth-email" data-testid={ids.emailInput} type="email" autoComplete="email" required maxLength={254}
+                  value={email} onChange={(event) => { setEmail(event.target.value); setNotice(""); }}
+                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-brand-magenta focus:ring-2 focus:ring-brand-magenta/20" />
+              </div>
+              {!resetting && <>
+                <div>
+                  <label htmlFor="auth-password" className="block text-sm font-medium text-zinc-700 mb-1.5">Password</label>
+                  <input id="auth-password" data-testid={ids.passwordInput} type="password" required minLength={signup ? 6 : undefined}
+                    autoComplete={signup ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)}
+                    aria-describedby={signup ? "password-hint" : undefined}
+                    className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-brand-magenta focus:ring-2 focus:ring-brand-magenta/20" />
+                  {signup && <p id="password-hint" className="mt-1.5 text-xs text-zinc-500">Use at least 6 characters.</p>}
+                </div>
+                {signup && <div>
+                  <label htmlFor="auth-confirmation" className="block text-sm font-medium text-zinc-700 mb-1.5">Confirm password</label>
+                  <input id="auth-confirmation" data-testid={REGISTER.passwordConfirmInput} type="password" required minLength={6} autoComplete="new-password"
+                    value={confirmation} onChange={(event) => setConfirmation(event.target.value)}
+                    className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-brand-magenta focus:ring-2 focus:ring-brand-magenta/20" />
+                </div>}
+              </>}
+              <button type="submit" data-testid={resetting ? "reset-password-submit-button" : ids.submitButton}
+                className="w-full bg-ink hover:bg-brand-magenta text-white font-semibold py-3.5 px-6 rounded-full text-sm transition-colors disabled:cursor-not-allowed">
+                {pending === "email" ? "Please wait…" : resetting ? "Send reset link" : signup ? "Create account" : "Sign in with email"}
+              </button>
+            </fieldset>
+          </form>
+
+          {!signup && <button type="button" data-testid={LOGIN.forgotPasswordLink} disabled={busy}
+            onClick={() => { setResetting(!resetting); setError(""); setNotice(""); setPassword(""); }}
+            className="mt-4 text-sm font-medium text-zinc-600 hover:text-brand-magenta disabled:opacity-60">
+            {resetting ? "Back to sign in" : "Forgot password?"}
+          </button>}
+
+          <div className="flex items-center gap-3 my-6 text-xs text-zinc-400">
+            <div className="h-px bg-zinc-200 flex-1" /><span>or</span><div className="h-px bg-zinc-200 flex-1" />
+          </div>
+
           {/* Google Sign In Button */}
           <button
             data-testid="google-signin-btn"
             onClick={handleSignIn}
-            disabled={signingIn}
+            disabled={busy}
             className="w-full relative flex items-center justify-center gap-3.5 bg-white hover:bg-zinc-50 text-zinc-800 border-2 border-zinc-200 hover:border-zinc-300 font-semibold py-3.5 px-6 rounded-full text-sm transition-all duration-200 shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed group"
           >
             {signingIn ? (
@@ -112,21 +201,15 @@ export default function Login() {
             </span>
           </button>
 
-          {/* Privacy and trust indicator */}
-          <div className="mt-8 pt-6 border-t border-zinc-100 space-y-3 text-left">
-            <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-              <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-              <span>Google Firebase secure single sign-on</span>
-            </div>
-            <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-              <Lock size={16} className="text-zinc-400 shrink-0" />
-              <span>User-wise bag & order isolation (private to you)</span>
-            </div>
-            <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-              <Truck size={16} className="text-zinc-400 shrink-0" />
-              <span>Order updates & automated Cashfree receipts</span>
-            </div>
-          </div>
+          {!admin && <p className="mt-6 text-sm text-zinc-500">
+            {signup ? "Already have an account? " : "New to CRESTUS? "}
+            <Link to={switchUrl} data-testid={signup ? REGISTER.loginLink : LOGIN.registerLink}
+              onClick={(event) => { if (busy) event.preventDefault(); }} aria-disabled={busy}
+              className="font-semibold text-brand-magenta hover:underline">
+              {signup ? "Sign in" : "Create an account"}
+            </Link>
+          </p>}
+
         </div>
       </div>
     </div>

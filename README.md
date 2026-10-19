@@ -51,3 +51,19 @@ Firestore rules: the backend uses the Admin SDK, so lock the `orders` and `meta`
 ## Frontend routes
 
 `/checkout` → Cashfree modal → `/pending?order_id=…` (bounded verification polling) → `/success` or `/failed` (safe retry). Order history at `/orders`, details and timeline at `/orders/:id`, public lookup at `/track-order` (order id + email). Admin console at `/admin/orders` (retry stage, cancel shipment, refund, documents, tracking refresh).
+
+## Administrator workspace
+
+The dedicated admin build targets `https://admin.crestuseccommerce.store`, with an overview, searchable/paginated orders, fulfillment and refund controls, a read-only product catalog, ordering customers, and service configuration. The shared storefront source also exposes it at `/admin` for local testing. Firebase authentication and server-side administrator checks protect every data route; the email allowlist requires a verified email.
+
+Run `npm run build:admin` from the repository root to create the Hostinger document root at `dist/admin/` and archive at `output/crestus-admin-hostinger.zip`. Deployment, DNS, SSL, Firebase authorized-domain setup, and verification are documented in [Admin deployment](docs/admin-deployment.md).
+
+## Customer authentication
+
+Customers can create an email/password account at `/signup` and sign in at `/login`. Both pages also offer Google sign-in. Login includes password reset; signup sends an email verification link. Local `redirect` paths preserve the destination when switching between signup and login, including checkout.
+
+In Firebase project `crestus-6f962`, open **Authentication → Sign-in method** and enable **Email/Password** and **Google**. In **Authentication → Settings → Authorized domains**, add each deployed storefront domain (and `localhost` for local testing). The frontend's `REACT_APP_FIREBASE_*` settings must point to the same project as the backend's Firebase Admin credentials. These provider settings are managed in Firebase, not by the frontend build. See [Firebase email/password setup](https://firebase.google.com/docs/auth/web/password-auth) and [Google sign-in setup](https://firebase.google.com/docs/auth/web/google-signin).
+
+Firebase maintains the browser session and the API verifies its ID token for either method. Unverified email accounts can access their own UID-linked orders. Email-based order matching and the `ADMIN_EMAILS` allowlist require Firebase's `email_verified` claim; explicit `admin=true` custom claims remain authoritative. Customers can resend verification and refresh the verified session from My Orders.
+
+Validation: `cd frontend && CI=true npm test -- --watchAll=false --runInBand`, `CI=true npm run build`, and `cd backend && npm test`. Tests mock Firebase and payment/shipping services; they do not prove live provider configuration or email delivery. Deploy the frontend and backend changes together to retain the email verification access checks.

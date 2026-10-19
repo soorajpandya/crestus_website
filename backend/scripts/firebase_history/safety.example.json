@@ -1,0 +1,11 @@
+{
+  "project": "crestus-6f962",
+  "database": "(default)",
+  "source_sha256": "replace_from_reviewed_preview",
+  "plan_sha256": "replace_from_reviewed_preview",
+  "deployed_import_guards_verified": false,
+  "trigger_inventory_verified": false,
+  "private_collections_rules_verified": false,
+  "verified_at": null,
+  "evidence": null
+}

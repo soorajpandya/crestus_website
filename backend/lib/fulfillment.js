@@ -1,5 +1,6 @@
 // Durable fulfillment worker: resumes each order from its persisted stage, never recreating Shiprocket orders/AWBs/pickups.
 const { withLock } = require("./lock");
+const { isHistoricalImport, requireOperationalOrder } = require('./historicalImport');
 const { ShiprocketError } = require("./shiprocket");
 const { now } = require("./orders");
 
@@ -214,6 +215,7 @@ function createFulfillmentService({ config, store, shiprocket, shipping, trackin
     return withLock(`ful:${orderId}`, async () => {
       let order = await store.getOrder(orderId);
       if (!order) return null;
+      if (isHistoricalImport(order)) return order;
       if (!["paid", "partially_refunded"].includes(order.payment.status)) return order; // never ship unpaid
       if (!["queued", "retry_wait", "processing"].includes(order.fulfillment.status)) return order;
 
@@ -278,6 +280,7 @@ function createFulfillmentService({ config, store, shiprocket, shipping, trackin
       throw e;
     }
     const updated = await store.updateOrder(orderId, (o) => {
+      requireOperationalOrder(o);
       if (!["paid", "partially_refunded"].includes(o.payment.status)) {
         const e = new Error("Order is not paid");
         e.status = 409;
@@ -302,6 +305,7 @@ function createFulfillmentService({ config, store, shiprocket, shipping, trackin
     return withLock(`ful:${orderId}`, async () => {
       const order = await store.getOrder(orderId);
       if (!order) return null;
+      requireOperationalOrder(order);
       if (order.fulfillment.status === "cancelled") return order;
       if (["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(order.tracking.status)) {
         const e = new Error("Shipment already in courier network; cancel via Shiprocket panel/RTO");

@@ -5,6 +5,7 @@
   "description": "Crestus website and backend server",
   "main": "backend/server.js",
   "scripts": {
+    "build:admin": "node scripts/package-admin.cjs",
     "postinstall": "cd backend && npm install",
     "start": "node backend/server.js",
     "test": "cd backend && npm test"

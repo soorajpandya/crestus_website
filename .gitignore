@@ -91,3 +91,9 @@ credentials.json
 frontend/node_modules/.cache/default-development/0.pack
 orders.json
 backend/orders.json
+
+# Generated previews and deployment artifacts
+/output/
+
+# Safe configuration templates
+!.env.example
