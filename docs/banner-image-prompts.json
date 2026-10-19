@@ -1,0 +1,20 @@
+{
+  "generator": "Built-in image_gen tool",
+  "generatedOn": "2026-10-15",
+  "reference": "User-supplied fashion banners; original CRESTUS photography with live HTML logo, offer copy and shop links.",
+  "offer": "50% off every product, already included in catalog selling prices. No promo code required and no extra discount applied.",
+  "images": [
+    {
+      "path": "frontend/public/images/banners/wardrobe-refresh.jpg",
+      "prompt": "Use case: ads-marketing. Asset type: original photographic panel for CRESTUS fashion website banner; all branding and offer copy will be added in HTML. Create a premium but approachable fashion editorial of two stylish adult Indian models, woman and man in their mid twenties, seated side by side on a sculptural burgundy curved bench. Woman wears cream tailored trousers and a soft ivory open overshirt over a ribbed cream top. Man wears a brown suede-texture casual jacket over an ecru crew-neck top and beige trousers. Natural confident relaxed poses, facing camera, believable clothing, full heads through knees clearly visible. Warm cream studio with sweeping burgundy architectural curve, subtle paper texture, luxurious soft directional daylight, warm film color. Square composition with both models comfortably inside frame and generous margin around heads, fashion campaign photography, detailed realistic faces and hands. No text, lettering, logos, watermark, UI, border or collage. Do not include price or discount text. Reference mood: warm cream and dark burgundy fashion campaign, editorial restraint."
+    },
+    {
+      "path": "frontend/public/images/banners/everyday-edit.jpg",
+      "prompt": "Use case: ads-marketing. Asset type: original photographic panel for CRESTUS fashion website banner; all branding and offer copy will be added in HTML. Two stylish adult Indian fashion models, woman and man in their mid twenties standing together naturally in a pale sage architectural studio. Woman in a relaxed sage overshirt over plain white top, light blue straight jeans; man in an ivory casual shirt over a white tee and dark tailored trousers. Confident candid gaze towards camera, refined everyday casual styling, no visible brands. Soft green curved wall and warm off-white plaster, light diagonal afternoon shadows, small understated potted olive tree at the far edge. Square framing with complete heads through upper shins inside frame; realistic skin, detailed clothing and believable hands. Editorial premium fashion photography, fresh muted sage and cream color palette. No text, lettering, logos, watermark, price, discount, UI, border or collage."
+    },
+    {
+      "path": "frontend/public/images/banners/big-style-sale.jpg",
+      "prompt": "Use case: ads-marketing. Asset type: original photographic panel for CRESTUS fashion website banner; branding and copy added separately in HTML. Two confident stylish adult Indian fashion models, woman and man in their mid twenties, standing at a pale raw concrete architectural wall with angular sunlight and shadows. Woman wears a black denim cropped jacket over a plain white crew-neck tee and charcoal wide-leg jeans. Man wears a burnt orange overshirt over plain black crew-neck tee and black casual trousers. Dynamic but natural fashion poses, realistic faces and hands, direct confident camera gaze, everyday streetwear styling. Bold editorial fashion photograph, high contrast sunlight, warm orange, black and stone grey palette. Square composition, entire heads through knees comfortably within frame, minimal clean background. No text, lettering, logos, watermark, UI, prices, discount, border or collage."
+    }
+  ]
+}

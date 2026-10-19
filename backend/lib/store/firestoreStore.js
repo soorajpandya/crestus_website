@@ -1,0 +1,85 @@
+// Firestore-backed store (firebase-admin). Orders live in `orders/{order_id}`; small key/value state in `meta/{key}`.
+const { isHistoricalImport } = require('../historicalImport');
+const { ORDER_SUMMARY_FIELDS } = require('../admin');
+function createFirestoreStore({ db }) {
+  const orders = db.collection("orders");
+  const metaCol = db.collection("meta");
+  const snapToList = (snap) => snap.docs.map((d) => d.data());
+  let orderRevision = 0;
+
+  return {
+    driver: "firestore",
+    get orderRevision() { return orderRevision; },
+    async listOrderSummaries() {
+      const snap = await orders.select(...ORDER_SUMMARY_FIELDS).get();
+      return snap.docs.map(doc => ({ ...doc.data(), order_id: doc.data().order_id || doc.id }));
+    },
+    async getOrder(orderId) {
+      const doc = await orders.doc(orderId).get();
+      return doc.exists ? doc.data() : null;
+    },
+    async putOrder(order) {
+      await orders.doc(order.order_id).set(order);
+      orderRevision++;
+      return order;
+    },
+    async updateOrder(orderId, mutator) {
+      const ref = orders.doc(orderId);
+      const result = await db.runTransaction(async (tx) => {
+        const doc = await tx.get(ref);
+        if (!doc.exists) return null;
+        const current = doc.data();
+        const next = await mutator(current);
+        if (!next) return current;
+        tx.set(ref, next);
+        return next;
+      });
+      orderRevision++;
+      return result;
+    },
+    async listOrdersForUser({ userId, email }) {
+      const results = new Map();
+      if (userId) {
+        snapToList(await orders.where("user_id", "==", userId).get()).forEach((o) => results.set(o.order_id, o));
+      }
+      if (email) {
+        snapToList(await orders.where("customer.email", "==", email.toLowerCase()).get()).forEach((o) => results.set(o.order_id, o));
+      }
+      return Array.from(results.values()).filter(o => !isHistoricalImport(o)).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    },
+    async listOrders({ limit = 100, paymentStatus, fulfillmentStatus } = {}) {
+      let q = orders;
+      if (paymentStatus) q = q.where("payment.status", "==", paymentStatus);
+      if (fulfillmentStatus) q = q.where("fulfillment.status", "==", fulfillmentStatus);
+      const list = snapToList(await q.get());
+      return list.sort((a, b) => ((a.created_at || a.payment?.observed_success_transaction_time || a.imported_at || '') < (b.created_at || b.payment?.observed_success_transaction_time || b.imported_at || '') ? 1 : -1)).slice(0, limit);
+    },
+    async findOrderByAwb(awb) {
+      const snap = await orders.where("shipment.awb_code", "==", awb).limit(1).get();
+      return snap.empty ? null : snap.docs[0].data();
+    },
+    async findOrderByShiprocketOrderId(srOrderId) {
+      const snap = await orders.where("shipment.sr_order_id", "==", String(srOrderId)).limit(1).get();
+      return snap.empty ? null : snap.docs[0].data();
+    },
+    async listDueFulfillmentJobs(now = Date.now()) {
+      const list = snapToList(await orders.where("fulfillment.due", "==", true).get());
+      return list.filter((o) => !o.fulfillment.next_run_at || Date.parse(o.fulfillment.next_run_at) <= now);
+    },
+    async listActiveShipments() {
+      return snapToList(await orders.where("tracking.active", "==", true).get());
+    },
+    async listPendingPayments() {
+      return snapToList(await orders.where("payment.status", "==", "pending").get());
+    },
+    async getMeta(key) {
+      const doc = await metaCol.doc(key).get();
+      return doc.exists ? doc.data().value ?? null : null;
+    },
+    async setMeta(key, value) {
+      await metaCol.doc(key).set({ value, updated_at: new Date().toISOString() });
+    },
+  };
+}
+
+module.exports = { createFirestoreStore };

@@ -1,0 +1,93 @@
+{
+  "generator": "Built-in image_gen tool",
+  "generatedOn": "2026-10-15",
+  "purpose": "Original CRESTUS catalog imagery; reference shopping URLs were not used as image sources.",
+  "outputDirectory": "frontend/public/images/products",
+  "format": "Optimized JPEG, maximum dimension 1200px",
+  "images": [
+    {
+      "productId": "m-cotton-crew-socks",
+      "path": "frontend/public/images/products/m-cotton-crew-socks.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One pair of men's charcoal grey cotton crew socks, two matching socks neatly aligned with ribbed cuffs, heels and toes visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "m-sports-baseball-cap",
+      "path": "frontend/public/images/products/m-sports-baseball-cap.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One plain navy blue cotton baseball cap with a curved brim, six-panel stitched crown and adjustable rear strap, three-quarter front view. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "m-stretch-woven-belt",
+      "path": "frontend/public/images/products/m-stretch-woven-belt.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One men's dark brown stretch woven belt with a brushed silver rectangular prong buckle and brown PU end tabs, gently coiled with the buckle clearly visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "m-gym-sweatband-set",
+      "path": "frontend/public/images/products/m-gym-sweatband-set.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One black knitted terry sports headband and two matching wrist sweatbands, precisely three pieces arranged neatly. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "m-cotton-bandana",
+      "path": "frontend/public/images/products/m-cotton-bandana.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One navy blue cotton bandana with a small white paisley pattern, folded into a broad triangle, folds and print visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-cotton-ankle-socks",
+      "path": "frontend/public/images/products/w-cotton-ankle-socks.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: Three pairs of women's cotton ankle socks in blush pink, light grey and cream. Exactly six socks arranged in three matching pairs, fine knit texture, ribbed cuffs. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-fashion-tape",
+      "path": "frontend/public/images/products/w-fashion-tape.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: Double-sided transparent fashion tape strips with plain cream peel-off backing, laid out as one neat sheet of 36 small strips in six rows of six, with one corner backing lifted to reveal the clear adhesive. Unbranded and no packaging text. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-braided-headband",
+      "path": "frontend/public/images/products/w-braided-headband.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One blush pink fabric braided hair headband in a classic horseshoe shape, thick soft braid across the crown and slim covered tips. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-printed-stole",
+      "path": "frontend/public/images/products/w-printed-stole.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One lightweight ivory and dusty rose printed scarf, subtle botanical floral pattern, loosely folded and draped to show its soft fabric and short fringed edges. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-dupatta-clips",
+      "path": "frontend/public/images/products/w-dupatta-clips.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: Exactly four small silver-tone dupatta securing clips with smooth pearl-white oval decorations, practical spring clip fastenings partially visible, arranged neatly in a two by two layout. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday accessory. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete product, entire subject inside central 75 percent with generous clean margins, sharp textile and surface detail. No people, hands, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "m-everyday-cotton-tee",
+      "path": "frontend/public/images/products/m-everyday-cotton-tee.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One men's plain forest green cotton crew-neck T-shirt, short sleeves, relaxed everyday cut, no pocket or prints, neatly laid flat with both sleeves and full hem visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday clothing. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete garment, entire subject inside central 75 percent with generous clean margins, sharp textile and stitching detail. No people, hands, mannequins, hangers, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-everyday-cotton-tee",
+      "path": "frontend/public/images/products/w-everyday-cotton-tee.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One women's plain dusty rose cotton crew-neck T-shirt, short sleeves, relaxed everyday cut, no pocket or prints, neatly laid flat with both sleeves and full hem visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday clothing. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete garment, entire subject inside central 75 percent with generous clean margins, sharp textile and stitching detail. No people, hands, mannequins, hangers, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "m-everyday-casual-shirt",
+      "path": "frontend/public/images/products/m-everyday-casual-shirt.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One men's plain light blue cotton-blend long-sleeve casual shirt, simple collar, visible small neutral buttons and one chest pocket, neatly laid flat with full sleeves and hem visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday clothing. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete garment, entire subject inside central 75 percent with generous clean margins, sharp textile and stitching detail. No people, hands, mannequins, hangers, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    },
+    {
+      "productId": "w-everyday-straight-kurti",
+      "path": "frontend/public/images/products/w-everyday-straight-kurti.jpg",
+      "prompt": "Use case: product-mockup. Asset type: original e-commerce catalog photograph for CRESTUS. Subject: One women's plain deep teal cotton-blend knee-length straight kurti with three-quarter sleeves, modest round neckline with a short button placket and small side slits, unadorned everyday cut, laid flat with sleeves and full hem visible. Style: realistic polished studio product photography, natural materials and believable construction, simple accessible everyday clothing. Scene: clean warm off-white seamless backdrop, soft diffused daylight, subtle contact shadows. Composition: portrait 3:4, centered complete garment, entire subject inside central 75 percent with generous clean margins, sharp textile and stitching detail. No people, hands, mannequins, hangers, props, logos, text, price, label, watermark, collage or border. Generate a single catalog photograph.",
+      "transparent_background": false
+    }
+  ]
+}

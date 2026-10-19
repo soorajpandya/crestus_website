@@ -1,0 +1,128 @@
+{
+  "theme_strategy": "Light Theme ONLY. Emphasizing 'Myntra-inspired' bright, clean, premium e-commerce aesthetics with large whitespace, minimalistic layouts, and product-first presentation.",
+  "typography": {
+    "primary_heading": {
+      "font_family": "Outfit, sans-serif",
+      "usage": "H1, H2, H3, large display numbers (Manifesto chapters)",
+      "weights": "Light (300), Medium (500), SemiBold (600)",
+      "styling": "Tight tracking (tracking-tighter) for large headings, bold contrast."
+    },
+    "body": {
+      "font_family": "Manrope, sans-serif",
+      "usage": "Paragraphs, navigation, product titles, metadata, buttons",
+      "weights": "Regular (400), Medium (500)",
+      "styling": "Clean, readable, neutral color. Tracking normal or slightly loose for small uppercase labels."
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#FFFFFF",
+      "secondary": "#FAFAFA",
+      "surface": "#F4F4F5"
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#52525B",
+      "muted": "#A1A1AA"
+    },
+    "brand": {
+      "magenta": "#F41CB2",
+      "orange": "#FF912E",
+      "dark_orange": "#F25511",
+      "maroon": "#9F163C"
+    },
+    "accents": "Use the brand colors sparingly as accent lines, hover states, 'Add to Cart' buttons, or sale tags. Do not use gradients of these colors."
+  },
+  "layouts_and_grids": {
+    "spacing": "Generous spacing. Use `py-24`, `py-32` for sections to create breathing room.",
+    "product_grid": "High density, 2 columns on mobile, 3 to 4 columns on desktop. `gap-4` or `gap-8`.",
+    "product_cards": "Image aspect ratio MUST be `aspect-[3/4]` with `object-cover`. Soft rounded corners (`rounded-xl` or `rounded-2xl`) with subtle hover shadow.",
+    "hero_section": "Large kinetic hero. White space heavy. Headline centered or dynamically aligned. Includes a masked line-by-line reveal animation on load.",
+    "manifesto_section": "Numbered chapters. Extremely large typographic numbers in `text-brand-magenta` paired with clean minimal text."
+  },
+  "motion_and_interactions": {
+    "smooth_scrolling": "MANDATORY: Use `@studio-freight/lenis` for premium momentum smooth scrolling.",
+    "hero_reveal": "MANDATORY: Line-by-line text reveal using `framer-motion`. Parent `overflow-hidden`, child `motion.div` animates `y: \"100%\"` to `y: 0` with a spring transition.",
+    "parallax": "Include at least one parallax section (e.g., in the manifesto or a banner image) where the background moves slower than the scroll.",
+    "editorial_marquee": "MANDATORY: A slow-moving editorial ribbon separating sections using `react-fast-marquee`. Low contrast, uppercase serif or mono text.",
+    "micro_interactions": "Magnetic feeling buttons or slight scale up (`hover:scale-[1.02]`) on product cards."
+  },
+  "components": {
+    "header": "Sticky navigation, `backdrop-blur-xl bg-white/80`. Must include a visible logo, Men/Women links, Cart icon (triggering drawer), and User/Login icon.",
+    "cart_drawer": "Use Shadcn `Sheet` component for a slide-out cart. Show items, total, and checkout button.",
+    "product_page": "Spotlight product imagery (clipped frames, clean grey or white backgrounds). Size selector (toggle group or simple buttons). 'Add to Cart' CTA in bold brand color.",
+    "buttons": "Pill-shaped (`rounded-full`) or smooth rounded (`rounded-lg`). High contrast. E.g., `bg-[#F41CB2] text-white hover:bg-[#F25511] transition-colors`."
+  },
+  "image_urls": {
+    "hero_images": [
+      {
+        "url": "https://images.pexels.com/photos/38563258/pexels-photo-38563258.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Fashion-forward woman in chic outfit, used for main banner or women's category."
+      },
+      {
+        "url": "https://images.pexels.com/photos/17806235/pexels-photo-17806235.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Stylish man with newsboy cap, used for men's category banner."
+      }
+    ],
+    "men_products": [
+      {
+        "url": "https://images.unsplash.com/photo-1644959713434-f6241e4284ec",
+        "description": "Men's fashion black turtleneck"
+      },
+      {
+        "url": "https://images.pexels.com/photos/3054976/pexels-photo-3054976.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Men's urban streetwear"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1774029533385-f2955619c7c9",
+        "description": "Men's black blazer"
+      }
+    ],
+    "women_products": [
+      {
+        "url": "https://images.unsplash.com/photo-1630255734129-c0ad041dbab0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHx3b21lbnMlMjBmYXNoaW9uJTIwc3R1ZGlvfGVufDB8fHx8MTc4MTg1ODI1Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Women's orange/brown fashion top"
+      },
+      {
+        "url": "https://images.pexels.com/photos/35171438/pexels-photo-35171438.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Women's trendy gray suit"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1617690032954-692168050cac",
+        "description": "Women's red and green dress"
+      }
+    ]
+  },
+  "dependencies_to_install": [
+    "yarn add @studio-freight/lenis",
+    "yarn add react-fast-marquee",
+    "yarn add framer-motion",
+    "yarn add lucide-react"
+  ],
+  "accessibility_and_testing": {
+    "contrast": "Ensure all text meets minimum WCAG AA standards. If putting white text on the pink/orange buttons, verify contrast is adequate, otherwise use dark text.",
+    "testing_attributes": "All interactive elements MUST have `data-testid` attributes (e.g., `data-testid=\"add-to-cart-btn\"`, `data-testid=\"category-mens\"`).",
+    "motion_preference": "Respect `prefers-reduced-motion` for heavy scroll animations."
+  },
+  "instructions_to_main_agent": [
+    "1. Setup global styles in index.css importing Outfit and Manrope from Google Fonts.",
+    "2. Configure Tailwind with the specified brand colors and custom fonts.",
+    "3. Build a layout with a fixed blurred header containing Men/Women links and a Cart trigger.",
+    "4. Implement the Hero Section: A highly kinetic, typography-heavy block. Use `framer-motion` for a staggered, line-by-line reveal of the headline. Include a subtle parallax image.",
+    "5. Add a `react-fast-marquee` band scrolling slowly below the hero featuring brand keywords or a manifesto intro.",
+    "6. Build a Product Grid Section. Use the provided images. Cards must have `aspect-[3/4]` sizing, minimalistic design, subtle hover shadows, and clean pricing typography.",
+    "7. Build a Manifesto Section: Create a multi-chapter narrative. Use huge numbered steps (e.g., '01', '02') paired with short text. Use framer-motion to fade these in on scroll.",
+    "8. Integrate a mocked 'Cart Drawer' and 'Google Login / Razorpay' flow using Shadcn components (Sheet for cart, Dialog for login).",
+    "9. Wrap the entire app or main scrolling container in Lenis for premium smooth scrolling."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "DO NOT use generic centered layouts or simplistic gradients.",
+    "DO NOT apply universal transition (transition: all). Use specific properties.",
+    "DO NOT center align the app container in CSS.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) for sticky headers.",
+    "Every interaction needs micro-animations (hover states, focus).",
+    "NEVER use AI assistant emojis for icons.",
+    "Always use the provided image URLs. Missing images lead to placeholder text which is forbidden.",
+    "Include data-testid on every interactive element."
+  ]
+}

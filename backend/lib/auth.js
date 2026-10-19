@@ -1,0 +1,97 @@
+const { initFirebaseAdmin } = require("./store");
+const { isHistoricalImport } = require('./historicalImport');
+
+// Follow every Firebase page and expose only directory fields, never password hashes or claims.
+async function listDirectoryUsers(firebaseAuth) {
+  const users = [];
+  let pageToken;
+  do {
+    const page = await firebaseAuth.listUsers(1000, pageToken);
+    users.push(...page.users.map(user => ({
+      id: user.uid, name: user.displayName || '', email: user.email || '', phone: user.phoneNumber || '',
+      registered: true, disabled: user.disabled === true, email_verified: user.emailVerified === true,
+      created_at: user.metadata?.creationTime || null, last_sign_in_at: user.metadata?.lastSignInTime || null,
+    })));
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return users;
+}
+
+// Verifies Firebase ID tokens. Admin = custom claim `admin` or a verified ADMIN_EMAILS address.
+function createAuth(config) {
+  const app = initFirebaseAdmin(config);
+  const admin = app ? require("firebase-admin") : null;
+
+  const isAdminIdentity = (identity) =>
+    Boolean(identity && (
+      identity.claims?.admin === true ||
+      (identity.emailVerified === true && config.adminEmails.includes((identity.email || "").toLowerCase()))
+    ));
+
+  async function identify(req) {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+    if (token && admin) {
+      try {
+        const decoded = await admin.auth(app).verifyIdToken(token);
+        return { uid: decoded.uid, email: (decoded.email || "").toLowerCase(), claims: decoded, emailVerified: decoded.email_verified === true, verified: true };
+      } catch {
+        return null;
+      }
+    }
+    if (token && !admin && (!config.isProduction || config.allowInsecureDevAuth)) {
+      try {
+        const parts = token.split(".");
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
+          const uid = payload.user_id || payload.sub;
+          if (uid) {
+            return {
+              uid,
+              email: (payload.email || "").toLowerCase(),
+              claims: payload,
+              emailVerified: payload.email_verified === true,
+              verified: false,
+            };
+          }
+        }
+      } catch {}
+    }
+    if (!admin && config.allowInsecureDevAuth && req.headers["x-dev-uid"]) {
+      // This explicit development-only escape hatch models a trusted email identity.
+      return { uid: String(req.headers["x-dev-uid"]), email: String(req.headers["x-dev-email"] || "").toLowerCase(), claims: {}, emailVerified: true, verified: false };
+    }
+    return null;
+  }
+
+  const requireAuth = async (req, res, next) => {
+    if (!admin && !config.allowInsecureDevAuth) {
+      return res.status(503).json({ detail: "Authentication is not configured on the server" });
+    }
+    const identity = await identify(req);
+    if (!identity) return res.status(401).json({ detail: "Sign in required" });
+    req.user = { ...identity, is_admin: isAdminIdentity(identity) };
+    next();
+  };
+
+  const requireAdmin = async (req, res, next) =>
+    requireAuth(req, res, () => {
+      if (!req.user.is_admin) return res.status(403).json({ detail: "Admin access required" });
+      next();
+    });
+
+  const ownsOrder = (user, order) =>
+    Boolean(
+      user &&
+        order &&
+        !isHistoricalImport(order) &&
+        ((order.user_id && order.user_id === user.uid) ||
+          (user.emailVerified === true && user.email && (order.customer?.email || "").toLowerCase() === user.email))
+    );
+
+  return { requireAuth, requireAdmin, ownsOrder, isAdminIdentity, enabled: Boolean(admin) || config.allowInsecureDevAuth,
+    listUsers: () => admin ? listDirectoryUsers(admin.auth(app)) : Promise.resolve(null),
+  };
+}
+
+module.exports = { createAuth, listDirectoryUsers };
