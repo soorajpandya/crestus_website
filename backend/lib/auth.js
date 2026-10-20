@@ -39,6 +39,24 @@ function createAuth(config) {
         return null;
       }
     }
+    if (token && !admin && (!config.isProduction || config.allowInsecureDevAuth)) {
+      try {
+        const parts = token.split(".");
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
+          const uid = payload.user_id || payload.sub;
+          if (uid) {
+            return {
+              uid,
+              email: (payload.email || "").toLowerCase(),
+              claims: payload,
+              emailVerified: payload.email_verified === true,
+              verified: false,
+            };
+          }
+        }
+      } catch {}
+    }
     if (!admin && config.allowInsecureDevAuth && req.headers["x-dev-uid"]) {
       // This explicit development-only escape hatch models a trusted email identity.
       return { uid: String(req.headers["x-dev-uid"]), email: String(req.headers["x-dev-email"] || "").toLowerCase(), claims: {}, emailVerified: true, verified: false };

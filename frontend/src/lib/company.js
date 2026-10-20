@@ -6,7 +6,11 @@ export const COMPANY = {
   address:
     "804 Krupal Pathshala, Shivranjani Char Rasta, Jodhpur Char Rasta, Ahmedabad, Ahmadabad City, Gujarat, India.",
   email: "support@crestuseccommerce.store",
-  phone: "+91 90819 54805",
+  phone: "+91 99982 46924",
   cin: "U46901GJ2026PTC177540",
   gstin: "24AANCC8195Q1ZO",
+  social: {
+    instagram: "https://www.instagram.com/crestus_commerce/",
+    facebook: "https://www.facebook.com/share/19SyzqPkdp/",
+  },
 };

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Instagram, Facebook } from "lucide-react";
 import { COMPANY } from "../lib/company";
 
 const COLUMNS = [
@@ -55,6 +55,28 @@ export const Footer = () => (
               <Phone size={15} className="shrink-0 text-brand-magenta" />
               <a href={`tel:${COMPANY.phone.replace(/\s/g, "")}`} data-testid="footer-phone" className="hover:text-brand-magenta transition-colors">{COMPANY.phone}</a>
             </p>
+          </div>
+          <div className="mt-6 flex items-center gap-3">
+            <a
+              href={COMPANY.social?.instagram || "https://www.instagram.com/"}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              data-testid="footer-instagram"
+              className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:border-brand-magenta hover:bg-brand-magenta/20 transition-all duration-200"
+            >
+              <Instagram size={17} />
+            </a>
+            <a
+              href={COMPANY.social?.facebook || "https://www.facebook.com/"}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              data-testid="footer-facebook"
+              className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:border-brand-magenta hover:bg-brand-magenta/20 transition-all duration-200"
+            >
+              <Facebook size={17} />
+            </a>
           </div>
         </div>
         <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8">

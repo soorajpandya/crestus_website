@@ -48,9 +48,9 @@ function loadConfig(env = process.env) {
     allowInsecureDevAuth: bool(env.ALLOW_INSECURE_DEV_AUTH) && env.NODE_ENV !== "production",
 
     cashfree: {
-      appId: env.CASHFREE_APP_ID || "",
-      secretKey: env.CASHFREE_SECRET_KEY || "",
-      sandbox: env.CASHFREE_ENV === "SANDBOX",
+      appId: String(env.CASHFREE_APP_ID || "").trim(),
+      secretKey: String(env.CASHFREE_SECRET_KEY || "").trim(),
+      sandbox: String(env.CASHFREE_ENV || "").trim().toUpperCase() === "SANDBOX",
     },
 
     firebase: {

@@ -160,14 +160,19 @@ function createMockShiprocketClient({ config }) {
       record("serviceability", q);
       maybeFail("serviceability");
       if (behaviour.courierUnavailable) return { status: 200, data: { available_courier_companies: [] } };
+      const addDays = (n) => {
+        const d = new Date();
+        d.setDate(d.getDate() + n);
+        return d.toISOString().slice(0, 10);
+      };
       return {
         status: 200,
         data: {
           recommended_courier_company_id: 10,
           available_courier_companies: [
-            { courier_company_id: 10, courier_name: "Mock Express", rate: 65, freight_charge: 65, etd: "2026-10-09", estimated_delivery_days: "5", cod: 0 },
-            { courier_company_id: 11, courier_name: "Mock Surface", rate: 55, freight_charge: 55, etd: "2026-10-12", estimated_delivery_days: "8", cod: 0 },
-            { courier_company_id: 12, courier_name: "Mock Air", rate: 120, freight_charge: 120, etd: "2026-10-06", estimated_delivery_days: "2", cod: 0 },
+            { courier_company_id: 10, courier_name: "Mock Standard", rate: 65, freight_charge: 65, etd: addDays(7), estimated_delivery_days: "7", cod: 0 },
+            { courier_company_id: 11, courier_name: "Mock Surface", rate: 55, freight_charge: 55, etd: addDays(10), estimated_delivery_days: "10", cod: 0 },
+            { courier_company_id: 12, courier_name: "Mock Express", rate: 120, freight_charge: 120, etd: addDays(8), estimated_delivery_days: "8", cod: 0 },
           ],
         },
       };

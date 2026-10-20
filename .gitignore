@@ -97,3 +97,6 @@ backend/orders.json
 
 # Safe configuration templates
 !.env.example
+
+.gitconfig
+.emergent/

@@ -4,15 +4,32 @@ const { ShiprocketError } = require("./shiprocket");
 function normaliseCouriers(resp) {
   const list = resp?.data?.available_courier_companies;
   if (!Array.isArray(list)) return [];
+  const now = new Date();
   return list
-    .map((c) => ({
-      courier_company_id: Number(c.courier_company_id),
-      courier_name: c.courier_name,
-      rate: Number(c.rate ?? c.freight_charge ?? 0),
-      etd: c.etd || null,
-      estimated_delivery_days: Number(c.estimated_delivery_days) || null,
-      cod: Number(c.cod) || 0,
-    }))
+    .map((c) => {
+      let days = Number(c.estimated_delivery_days) || 7;
+      if (days < 7) days = 7;
+      let etd = c.etd || null;
+      const minDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      if (etd) {
+        const parsed = new Date(etd);
+        if (isNaN(parsed.getTime()) || parsed < minDate) {
+          const d = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+          etd = d.toISOString().slice(0, 10);
+        }
+      } else {
+        const d = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+        etd = d.toISOString().slice(0, 10);
+      }
+      return {
+        courier_company_id: Number(c.courier_company_id),
+        courier_name: c.courier_name,
+        rate: Number(c.rate ?? c.freight_charge ?? 0),
+        etd,
+        estimated_delivery_days: days,
+        cod: Number(c.cod) || 0,
+      };
+    })
     .filter((c) => Number.isFinite(c.courier_company_id) && c.rate >= 0);
 }
 
