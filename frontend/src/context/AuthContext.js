@@ -51,6 +51,13 @@ export function AuthProvider({ children }) {
     try {
       const { user: signedInUser } = await signInWithGoogle();
       toast.success(`Welcome, ${signedInUser.displayName || "back"}!`);
+      // Trigger welcome email if this is a first-time Google sign-up
+      if (signedInUser.metadata?.creationTime === signedInUser.metadata?.lastSignInTime) {
+        api.post("/auth/welcome-email", {
+          email: signedInUser.email,
+          name: signedInUser.displayName || signedInUser.email.split("@")[0],
+        }).catch(() => {});
+      }
       return signedInUser;
     } catch (error) {
       if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") return null;
@@ -66,6 +73,13 @@ export function AuthProvider({ children }) {
 
   const signupWithEmail = async (email, password) => {
     const { user: newUser } = await createEmailAccount(email, password);
+    // Trigger welcome email in background
+    api.post("/auth/welcome-email", {
+      email: newUser.email,
+      name: newUser.displayName || newUser.email.split("@")[0],
+    }).catch((err) => {
+      console.warn("[Auth] Could not send welcome email:", err.message);
+    });
     // Account creation succeeds even if delivery of the verification email fails.
     try {
       await verifyEmail();
