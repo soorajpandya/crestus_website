@@ -5,7 +5,7 @@ import Lenis from "lenis";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
-import { AdminLayout, AdminOverview, AdminOrdersPage, AdminCatalog, AdminCustomers, AdminSettings, AdminNotFound } from "@/pages/AdminPanel";
+import { AdminLayout, AdminOverview, AdminOrdersPage, AdminCatalog, AdminCustomers, AdminSubscribers, AdminSettings, AdminNotFound } from "@/pages/AdminPanel";
 import { isAdminHost } from "@/lib/adminUi";
 import { track } from "@/lib/firebase";
 const Header = lazy(() => import("@/components/Header").then(module => ({ default: module.Header })));
@@ -32,6 +32,7 @@ const About = lazy(() => import("@/pages/StaticPages").then(module => ({ default
 const ShippingPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.ShippingPolicy })));
 const RefundPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.RefundPolicy })));
 const CancellationPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.CancellationPolicy })));
+import ScrollToTop from "@/components/ScrollToTop";
 const PrivacyPolicy = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.PrivacyPolicy })));
 const TermsOfService = lazy(() => import("@/pages/StaticPages").then(module => ({ default: module.TermsOfService })));
 
@@ -41,6 +42,7 @@ function LenisWrapper({ children }) {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
     const lenis = new Lenis({ duration: 1.15, smoothWheel: true });
+    window.__lenis = lenis;
     let rafId;
     const raf = (time) => {
       lenis.raf(time);
@@ -50,6 +52,7 @@ function LenisWrapper({ children }) {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      delete window.__lenis;
     };
   }, []);
   return children;
@@ -75,6 +78,7 @@ function AppRouter() {
         <Route path="orders/:order_id" element={<AdminOrderDetail />} />
         <Route path="catalog" element={<AdminCatalog />} />
         <Route path="customers" element={<AdminCustomers />} />
+        <Route path="subscribers" element={<AdminSubscribers />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="*" element={<AdminNotFound />} />
       </Route>
@@ -120,6 +124,7 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <LenisWrapper>
               <Suspense fallback={<div className="admin-loading" role="status">Loading page…</div>}><AppRouter /></Suspense>
             </LenisWrapper>

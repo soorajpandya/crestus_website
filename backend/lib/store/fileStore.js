@@ -8,6 +8,7 @@ function createFileStore({ dataDir }) {
   fs.mkdirSync(dataDir, { recursive: true });
   const ordersFile = path.join(dataDir, "orders.json");
   const metaFile = path.join(dataDir, "meta.json");
+  const subscribersFile = path.join(dataDir, "subscribers.json");
 
   const readJson = (file, fallback) => {
     try {
@@ -24,8 +25,10 @@ function createFileStore({ dataDir }) {
 
   let orders = readJson(ordersFile, {});
   let meta = readJson(metaFile, {});
+  let subscribers = readJson(subscribersFile, {});
   let orderRevision = 0;
   const persist = () => writeJson(ordersFile, orders);
+  const persistSubscribers = () => writeJson(subscribersFile, subscribers);
   const clone = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
 
   const all = () => Object.values(orders);
@@ -95,11 +98,34 @@ function createFileStore({ dataDir }) {
       meta[key] = value;
       writeJson(metaFile, meta);
     },
+    async findSubscriberByEmail(email) {
+      const target = (email || "").toLowerCase().trim();
+      const list = Object.values(subscribers);
+      return clone(list.find((s) => (s.email || "").toLowerCase().trim() === target) || null);
+    },
+    async addSubscriber(sub) {
+      const id = sub.id || `sub_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const record = {
+        id,
+        email: sub.email.toLowerCase().trim(),
+        created_at: sub.created_at || new Date().toISOString(),
+        source: sub.source || "homepage_newsletter",
+        status: sub.status || "active",
+      };
+      subscribers[id] = clone(record);
+      persistSubscribers();
+      return clone(record);
+    },
+    async listSubscribers() {
+      return Object.values(subscribers).map(clone).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    },
     async _reset() {
       orders = {};
       orderRevision++;
       meta = {};
+      subscribers = {};
       persist();
+      persistSubscribers();
       writeJson(metaFile, meta);
     },
   };

@@ -4,6 +4,7 @@ const { ORDER_SUMMARY_FIELDS } = require('../admin');
 function createFirestoreStore({ db }) {
   const orders = db.collection("orders");
   const metaCol = db.collection("meta");
+  const subscribersCol = db.collection("subscribers");
   const snapToList = (snap) => snap.docs.map((d) => d.data());
   let orderRevision = 0;
 
@@ -78,6 +79,26 @@ function createFirestoreStore({ db }) {
     },
     async setMeta(key, value) {
       await metaCol.doc(key).set({ value, updated_at: new Date().toISOString() });
+    },
+    async findSubscriberByEmail(email) {
+      const target = (email || "").toLowerCase().trim();
+      const snap = await subscribersCol.where("email", "==", target).limit(1).get();
+      return snap.empty ? null : { ...snap.docs[0].data(), id: snap.docs[0].id };
+    },
+    async addSubscriber(sub) {
+      const record = {
+        email: sub.email.toLowerCase().trim(),
+        created_at: sub.created_at || new Date().toISOString(),
+        source: sub.source || "homepage_newsletter",
+        status: sub.status || "active",
+      };
+      const ref = subscribersCol.doc();
+      await ref.set(record);
+      return { ...record, id: ref.id };
+    },
+    async listSubscribers() {
+      const snap = await subscribersCol.orderBy("created_at", "desc").get();
+      return snap.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
     },
   };
 }

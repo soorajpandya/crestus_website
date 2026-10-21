@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { ArrowDownLeft, ArrowUpRight, Boxes, ChevronLeft, ChevronRight, CircleHelp, ExternalLink, LayoutDashboard, LogOut, Menu, Package, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Truck, Users, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Boxes, ChevronLeft, ChevronRight, CircleHelp, Download, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Truck, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api, { apiErrorMessage } from '../lib/api';
 import { adminPath, filterCatalog } from '../lib/adminUi';
@@ -10,7 +10,14 @@ import { toast } from 'sonner';
 import './AdminPanel.css';
 
 const STOREFRONT = 'https://crestuseccommerce.store';
-const navigation = [['', 'Overview', LayoutDashboard], ['/orders', 'Orders', ShoppingBag], ['/catalog', 'Catalog', Boxes], ['/customers', 'Users & customers', Users], ['/settings', 'Settings', Settings]];
+const navigation = [
+  ['', 'Overview', LayoutDashboard],
+  ['/orders', 'Orders', ShoppingBag],
+  ['/catalog', 'Catalog', Boxes],
+  ['/customers', 'Users & customers', Users],
+  ['/subscribers', 'Subscribers', Mail],
+  ['/settings', 'Settings', Settings],
+];
 
 function StartupHint({ loading }) {
   const [slow, setSlow] = useState(false);
@@ -88,7 +95,7 @@ export function AdminOverview() {
   const data = resource.data;
   return <><AdminHeading eyebrow="YOUR STORE AT A GLANCE" title="Store overview" description="A clear view of your orders, customers, and fulfillment."><RefreshButton resource={{ ...resource, loading: resource.loading || recent.loading, refresh: () => { resource.refresh(); recent.refresh(); } }} /></AdminHeading><ResourceState resource={resource} />{data && <>
     <div className="admin-stats">{[[ShoppingBag, 'Storefront orders', data.orders.toLocaleString('en-IN'), 'All storefront orders', 'purple'], [ArrowDownLeft, 'Payments collected', inr(data.amount_paid), 'Recorded amount paid · before refunds', 'green'], [Users, 'Ordering customers', data.customers.toLocaleString('en-IN'), 'Customers with storefront orders', 'blue'], [Truck, 'Active shipments', data.active_shipments.toLocaleString('en-IN'), `${data.delivered} delivered orders`, 'orange']].map(([Icon, label, value, detail, color]) => <article className="admin-stat" key={label}><div className="admin-stat-top"><span>{label}</span><span className={`admin-stat-icon ${color}`}><Icon size={18} /></span></div><strong>{value}</strong><p>{detail}</p></article>)}</div>
-    <div className="admin-overview-grid"><section className="admin-card"><div className="admin-card-heading"><div><h2>Order activity</h2><p>Storefront orders created in the last 7 days</p></div><span className="admin-tag">IST</span></div><div className="admin-chart" role="img" aria-label={data.daily_orders.map(day => `${day.date}: ${day.orders} orders`).join(', ')}>{data.daily_orders.map(day => <div className="admin-chart-column" key={day.date}><span>{day.orders}</span><div className="admin-chart-track"><div style={{ height: `${day.orders ? Math.max(4, day.orders / Math.max(1, ...data.daily_orders.map(d => d.orders)) * 100) : 0}%` }} /></div><small>{new Date(`${day.date}T12:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'Asia/Kolkata' })}</small></div>)}</div></section><section className="admin-card"><div className="admin-card-heading"><div><h2>Store pulse</h2><p>What needs your attention</p></div><span className="admin-pulse-dot" /></div><div className="admin-pulse-list">{[['Needs attention', data.needs_attention, '/orders?filter=attention', 'orange'], ['Pending payments', data.pending_payments, '/orders?filter=pending', 'purple'], ['Catalog products', data.products, '/catalog', 'blue']].map(([label, count, path, color]) => <Link key={label} to={adminPath(path)}><span className={`admin-pulse-icon ${color}`}><Package size={18} /></span><span>{label}</span><strong>{count}</strong><ArrowUpRight size={16} /></Link>)}</div><div className="admin-note"><CircleHelp size={16} /><p>{data.historical_records.toLocaleString('en-IN')} historical records are excluded from storefront metrics. View them using the orders scope filter.</p></div></section></div>
+    <div className="admin-overview-grid"><section className="admin-card"><div className="admin-card-heading"><div><h2>Order activity</h2><p>Storefront orders created in the last 7 days</p></div><span className="admin-tag">IST</span></div><div className="admin-chart" role="img" aria-label={data.daily_orders.map(day => `${day.date}: ${day.orders} orders`).join(', ')}>{data.daily_orders.map(day => <div className="admin-chart-column" key={day.date}><span>{day.orders}</span><div className="admin-chart-track"><div style={{ height: `${day.orders ? Math.max(4, day.orders / Math.max(1, ...data.daily_orders.map(d => d.orders)) * 100) : 0}%` }} /></div><small>{new Date(`${day.date}T12:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'Asia/Kolkata' })}</small></div>)}</div></section><section className="admin-card"><div className="admin-card-heading"><div><h2>Store pulse</h2><p>What needs your attention</p></div><span className="admin-pulse-dot" /></div><div className="admin-pulse-list">{[['Needs attention', data.needs_attention, '/orders?filter=attention', 'orange'], ['Pending payments', data.pending_payments, '/orders?filter=pending', 'purple'], ['Catalog products', data.products, '/catalog', 'blue'], ['Newsletter subscribers', data.subscribers ?? 0, '/subscribers', 'green']].map(([label, count, path, color]) => <Link key={label} to={adminPath(path)}><span className={`admin-pulse-icon ${color}`}><Package size={18} /></span><span>{label}</span><strong>{count}</strong><ArrowUpRight size={16} /></Link>)}</div><div className="admin-note"><CircleHelp size={16} /><p>{data.historical_records.toLocaleString('en-IN')} historical records are excluded from storefront metrics. View them using the orders scope filter.</p></div></section></div>
     <section className="admin-card"><div className="admin-card-heading"><div><h2>Recent orders</h2><p>The latest activity from your storefront</p></div><Link className="admin-text-link" to={adminPath('/orders')}>View all orders <ArrowUpRight size={15} /></Link></div><ResourceState resource={recent} />{recent.data && <AdminOrderTable orders={recent.data.items} />}</section><p className="admin-updated">Updated {fmtDate(data.generated_at)} · All-time totals from the order store. Successful refunds recorded: {inr(data.successful_refunds)}.</p>
   </>}</>;
 }
@@ -147,6 +154,120 @@ export function AdminCustomers() {
       </>}
     </section>
   </>;
+}
+
+export function AdminSubscribers() {
+  const [search, setSearch] = useState('');
+  const resource = useAdminResource('/admin/subscribers', { search });
+  const list = Array.isArray(resource.data) ? resource.data : [];
+
+  const filtered = list.filter((item) => {
+    if (!search) return true;
+    return (item.email || '').toLowerCase().includes(search.toLowerCase()) || (item.id || '').toLowerCase().includes(search.toLowerCase());
+  });
+
+  const exportCSV = () => {
+    if (!filtered.length) {
+      toast.error('No subscribers to export.');
+      return;
+    }
+    const headers = 'ID,Email,Created At,Source,Status\n';
+    const rows = filtered
+      .map((s) => `"${s.id || ''}","${s.email || ''}","${s.created_at || ''}","${s.source || ''}","${s.status || ''}"`)
+      .join('\n');
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `newsletter_subscribers_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Subscriber list exported as CSV.');
+  };
+
+  return (
+    <>
+      <AdminHeading
+        title="Newsletter Subscribers"
+        description="Audience subscribed to your marketing newsletter, private drops, and updates."
+      >
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="admin-button secondary" onClick={exportCSV} disabled={!filtered.length}>
+            <Download size={15} /> Export CSV
+          </button>
+          <RefreshButton resource={resource} />
+        </div>
+      </AdminHeading>
+
+      <section className="admin-card">
+        <div className="admin-filters">
+          <div className="admin-search">
+            <Search size={17} />
+            <input
+              aria-label="Search subscribers"
+              placeholder="Search subscriber by email…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <ResourceState resource={resource} />
+
+        {resource.data && (
+          <>
+            <div className="admin-table-scroll">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Subscriber Email</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th className="admin-align-right">Subscribed Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((sub) => (
+                    <tr key={sub.id || sub.email}>
+                      <td>
+                        <strong>{sub.email}</strong>
+                        <small>{sub.id}</small>
+                      </td>
+                      <td>
+                        <span className="admin-tag">{sub.source || 'homepage_newsletter'}</span>
+                      </td>
+                      <td>
+                        <span className="admin-tag" style={{ color: '#059669', borderColor: '#a7f3d0' }}>
+                          ● {sub.status || 'active'}
+                        </span>
+                      </td>
+                      <td className="admin-align-right">
+                        {fmtDate(sub.created_at) || 'Unknown'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {!filtered.length && (
+              <div className="admin-empty">
+                <Mail size={28} />
+                <h3>No subscribers found</h3>
+                <p>New subscribers from the homepage newsletter will automatically appear here.</p>
+              </div>
+            )}
+
+            <div className="admin-pagination">
+              <span>{filtered.length.toLocaleString('en-IN')} total subscribers</span>
+            </div>
+          </>
+        )}
+      </section>
+    </>
+  );
 }
 
 export function AdminSettings() {

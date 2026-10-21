@@ -129,6 +129,39 @@ function createApp(overrides = {}) {
     res.json(found);
   });
 
+  // ---- newsletter ---------------------------------------------------------
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  app.post(
+    "/api/newsletter/subscribe",
+    asyncRoute(async (req, res) => {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ error: "Please enter valid email" });
+      }
+
+      const existing = await store.findSubscriberByEmail(email);
+      if (existing) {
+        return res.status(200).json({
+          alreadySubscribed: true,
+          message: "Already part of our private circle!",
+        });
+      }
+
+      const subscriber = await store.addSubscriber({
+        email,
+        source: req.body?.source || "homepage_newsletter",
+        status: "active",
+        created_at: new Date().toISOString(),
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Welcome to the world!",
+        subscriber: { id: subscriber.id, email: subscriber.email },
+      });
+    })
+  );
+
   // ---- identity -----------------------------------------------------------
   app.get("/api/auth/me", auth.requireAuth, (req, res) => res.json({ uid: req.user.uid, email: req.user.email, is_admin: req.user.is_admin }));
 
@@ -298,7 +331,10 @@ function createApp(overrides = {}) {
   const reports = adminReports.createAdminReports({ store, auth });
   const refreshReports = req => req.query.refresh === '1';
   admin.get('/overview', asyncRoute(async (req, res) => {
-    res.json(adminReports.overview(await reports.orders(refreshReports(req)), products));
+    const [orders, subscribers] = await Promise.all([reports.orders(refreshReports(req)), store.listSubscribers()]);
+    const summary = adminReports.overview(orders, products);
+    summary.subscribers = subscribers.length;
+    res.json(summary);
   }));
   admin.get('/customers', asyncRoute(async (req, res) => {
     const [orders, users] = await Promise.all([reports.orders(refreshReports(req)), reports.users(refreshReports(req))]);
@@ -309,6 +345,14 @@ function createApp(overrides = {}) {
     res.json({ ...adminReports.paginate(customers, req.query), directory_available: users !== null });
   }));
   admin.get('/catalog', (_req, res) => res.json(products));
+  admin.get('/subscribers', asyncRoute(async (req, res) => {
+    let list = await store.listSubscribers();
+    const search = String(req.query.search || '').trim().toLowerCase();
+    if (search) {
+      list = list.filter(s => (s.email || '').toLowerCase().includes(search) || (s.id || '').toLowerCase().includes(search));
+    }
+    res.json(list);
+  }));
   admin.get('/settings', (_req, res) => res.json({
     storefront_url: config.frontendUrl,
     admin_url: 'https://admin.crestuseccommerce.store',
