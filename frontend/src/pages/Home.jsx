@@ -5,6 +5,7 @@ import api from "../lib/api";
 import { ProductCard } from "../components/ProductCard";
 import { MarqueeBand } from "../components/MarqueeBand";
 import { OfferBanner } from "../components/OfferBanner";
+import NewsletterSubscribe from "../components/NewsletterSubscribe";
 
 const CHAPTERS = [
   { num: "01", title: "Fabric first", body: "Every piece begins at the mill. Merino, selvedge, silk crepe — materials chosen to outlast trends." },
@@ -73,6 +74,7 @@ export default function Home() {
         </div>
       </section>
 
+      <NewsletterSubscribe />
       <MarqueeBand dark />
     </div>
   );

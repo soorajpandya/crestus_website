@@ -36,14 +36,21 @@ const COLUMNS = [
 
 const slug = (s) => s.toLowerCase().replace(/\s+/g, "-");
 
+const scrollToTop = () => {
+  if (window.__lenis) {
+    window.__lenis.scrollTo(0, { immediate: true });
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+
 export const Footer = () => (
   <footer className="bg-ink text-white">
     <div className="max-w-7xl mx-auto px-6 lg:px-10 py-20">
       <div className="grid lg:grid-cols-12 gap-12">
         <div className="lg:col-span-5">
-          <p className="font-display font-semibold text-3xl tracking-tighter">
+          <Link to="/" onClick={scrollToTop} className="font-display font-semibold text-3xl tracking-tighter inline-block">
             CRESTUS<span className="text-brand-magenta">.</span>
-          </p>
+          </Link>
           <p className="text-zinc-400 text-sm mt-4 max-w-sm leading-relaxed">{COMPANY.description}</p>
           <div className="mt-6 space-y-2.5 text-sm text-zinc-400">
             <p className="flex items-start gap-2.5"><MapPin size={15} className="mt-0.5 shrink-0 text-brand-magenta" /> {COMPANY.address}</p>
@@ -84,7 +91,13 @@ export const Footer = () => (
             <div key={col.title} className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-zinc-500">{col.title}</p>
               {col.links.map((l) => (
-                <Link key={l.label} to={l.to} data-testid={`footer-${slug(l.label)}`} className="block text-sm text-zinc-300 hover:text-brand-magenta transition-colors">
+                <Link
+                  key={l.label}
+                  to={l.to}
+                  onClick={scrollToTop}
+                  data-testid={`footer-${slug(l.label)}`}
+                  className="block text-sm text-zinc-300 hover:text-brand-magenta transition-colors"
+                >
                   {l.label}
                 </Link>
               ))}
