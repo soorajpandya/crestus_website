@@ -165,6 +165,31 @@ function createApp(overrides = {}) {
   // ---- identity -----------------------------------------------------------
   app.get("/api/auth/me", auth.requireAuth, (req, res) => res.json({ uid: req.user.uid, email: req.user.email, is_admin: req.user.is_admin }));
 
+  const { sendWelcomeEmail } = require("./lib/mailer");
+  app.post(
+    "/api/auth/welcome-email",
+    asyncRoute(async (req, res) => {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      const name = String(req.body?.name || "").trim();
+      const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ error: "Please provide a valid email address" });
+      }
+
+      try {
+        const result = await sendWelcomeEmail({ email, name });
+        res.json({
+          success: true,
+          message: "Welcome email sent successfully",
+          preview_url: result.previewUrl || null,
+        });
+      } catch (err) {
+        logger.error("[mailer] Could not send welcome email:", err.message);
+        res.status(500).json({ error: "Could not send welcome email", detail: err.message });
+      }
+    })
+  );
+
   // ---- checkout -----------------------------------------------------------
   const priceCart = async (items, pincode) => {
     const lineItems = pricing.buildLineItems(items, products, packagingRules);
