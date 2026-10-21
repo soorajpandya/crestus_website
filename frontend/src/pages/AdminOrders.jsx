@@ -164,10 +164,12 @@ export function AdminOrderDetail() {
   const f = order.fulfillment || {};
   const s = order.shipment || {};
   const historical = order.record_kind === "historical_wallet_deposit" || order.import_metadata?.side_effects_disabled === true;
+  const activeGateway = order.payment.gateway === "razorpay";
+  const gatewayName = activeGateway ? "Razorpay" : "Previous gateway";
   const canRetry = !historical && order.payment.status === "paid" && !["completed", "cancelled"].includes(f.status);
   const canCancel = !historical && s.sr_order_id && f.status !== "cancelled" && !["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(order.tracking?.status);
-  const refunded = (order.payment.refunds || []).reduce((sum, r) => sum + Number(r.amount), 0);
-  const refundable = historical ? 0 : Math.max(0, Number(order.payment.amount_paid || 0) - refunded);
+  const refunded = (order.payment.refunds || []).filter(r => !["FAILED", "CANCELLED"].includes(r.status)).reduce((sum, r) => sum + Number(r.amount), 0);
+  const refundable = historical || !activeGateway ? 0 : Math.max(0, Number(order.payment.amount_paid || 0) - refunded);
 
   return (
     <div data-testid="admin-order-detail" className="max-w-6xl mx-auto pb-12">
@@ -208,7 +210,7 @@ export function AdminOrderDetail() {
       )}
       {order.alerts?.some((a) => a.type === "payment_amount_mismatch") && (
         <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
-          <p className="font-semibold">Payment amount mismatch detected — verify manually in the Cashfree dashboard before fulfilling.</p>
+          <p className="font-semibold">Payment amount mismatch detected — verify manually in the {gatewayName} dashboard before fulfilling.</p>
         </div>
       )}
 
@@ -227,9 +229,10 @@ export function AdminOrderDetail() {
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Identifiers</p>
             <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
               {[
-                ["Cashfree order id", order.payment.cashfree_order_id],
-                ["cf_order_id", order.payment.cf_order_id],
-                ["cf_payment_id", order.payment.cf_payment_id],
+                ["Payment gateway", gatewayName],
+                ["Razorpay order id", order.payment.razorpay_order_id],
+                ["Razorpay payment id", order.payment.razorpay_payment_id],
+                ...(!activeGateway ? [["Original provider order id", order.payment.cashfree_order_id], ["Original payment id", order.payment.cf_payment_id]] : []),
                 ["Payment method", order.payment.payment_method],
                 ["Confirmed via", order.payment.confirmed_via],
                 ["Shiprocket order id", s.sr_order_id],
@@ -278,8 +281,9 @@ export function AdminOrderDetail() {
         <div className="space-y-6">
           <section className="rounded-2xl border border-zinc-200 p-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Actions</p>
-            <button disabled={Boolean(busy) || historical} onClick={() => act("Payment re-check", () => api.post(`/admin/orders/${orderId}/payment/verify`))} className="w-full inline-flex items-center justify-center gap-2 border border-zinc-300 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors disabled:opacity-50">
-              <RefreshCw size={14} /> Re-verify payment with Cashfree
+            {!activeGateway && <p className="text-sm text-zinc-500">This payment record is read-only because its gateway has been retired.</p>}
+            <button disabled={Boolean(busy) || historical || !activeGateway} onClick={() => act("Payment re-check", () => api.post(`/admin/orders/${orderId}/payment/verify`))} className="w-full inline-flex items-center justify-center gap-2 border border-zinc-300 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors disabled:opacity-50">
+              <RefreshCw size={14} /> Re-verify payment with {gatewayName}
             </button>
             {canRetry && (
               <div className="space-y-2 pt-2">
@@ -326,7 +330,7 @@ export function AdminOrderDetail() {
               <button
                 disabled={refundable <= 0 || Boolean(busy)}
                 onClick={() => {
-                  if (!window.confirm(`Refund ${inr(refundAmount || refundable)} to the customer via Cashfree?`)) return;
+                  if (!window.confirm(`Refund ${inr(refundAmount || refundable)} to the customer via ${gatewayName}?`)) return;
                   act("Refund", () => api.post(`/admin/orders/${orderId}/refund`, { amount: refundAmount ? Number(refundAmount) : undefined, reason }));
                 }}
                 className="inline-flex items-center gap-2 bg-ink text-white px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors disabled:opacity-40"

@@ -28,25 +28,45 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+const catalogRequest = (config) => {
+  if (!config || (config.method || "get").toLowerCase() !== "get") return null;
+  const [pathname, query = ""] = (config.url || "").split("?");
+  const match = pathname.match(/^\/?products(?:\/([^/]+))?\/?$/);
+  return match ? { id: match[1], category: config.params?.category ?? new URLSearchParams(query).get("category") } : null;
+};
+
+const validProduct = (product) => product && typeof product.id === "string" &&
+  typeof product.name === "string" && Number.isFinite(product.price) &&
+  Array.isArray(product.sizes) && product.sizes.every((size) => typeof size === "string");
+
 const localProducts = (config) => {
-  const url = (config.url || "").replace(/^\/+/, "");
-  const id = url.startsWith("products/") ? url.slice("products/".length).split("?")[0] : null;
+  const { id, category } = catalogRequest(config);
   if (id) {
     const found = productsData.find((p) => p.id === id);
     if (!found) return Promise.reject(Object.assign(new Error("Product not found"), { response: { status: 404, data: { detail: "Product not found" } } }));
     return Promise.resolve({ data: found, status: 200, statusText: "OK", headers: {}, config });
   }
-  const category = config.params?.category;
   const list = category && category !== "all" ? productsData.filter((p) => (p.category || "").toLowerCase() === String(category).toLowerCase()) : productsData;
   return Promise.resolve({ data: list, status: 200, statusText: "OK", headers: {}, config });
 };
 
-// The catalogue is bundled, so product pages keep working if the API is unreachable. Order routes never fall back.
+// Static hosts can return index.html with HTTP 200 for /api/products. Validate
+// successful catalogue responses too, before page components use array methods.
+// Only public catalogue GETs may use bundled data; order/auth routes never fall back.
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const request = catalogRequest(response.config);
+    if (!request) return response;
+    const valid = request.id
+      ? validProduct(response.data)
+      : Array.isArray(response.data) && response.data.every(validProduct);
+    if (valid) return response;
+    console.warn("[API] Invalid catalog response. Falling back to local catalog data.");
+    return localProducts(response.config);
+  },
   (error) => {
     const config = error.config;
-    const isProducts = config && /(^|\/)products(\/|$|\?)/.test(config.url || "");
+    const isProducts = catalogRequest(config);
     const unreachable = !error.response || error.response.status >= 500;
     if (isProducts && unreachable) {
       console.warn("[API] Backend unavailable. Falling back to local catalog data.");

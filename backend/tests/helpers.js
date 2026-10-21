@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -6,72 +7,63 @@ const { loadConfig } = require("../lib/config");
 const { createApp } = require("../app");
 const { createShiprocketClient } = require("../lib/shiprocket");
 
-const WEBHOOK_SECRET = "test-webhook-secret";
+const KEY_SECRET = "fake-key-secret";
+const WEBHOOK_SECRET = "fake-webhook-secret";
 
-// In-memory stand-in for the Cashfree SDK with the exact method names/shapes used by the service.
-function createFakeCashfree() {
+function createFakeRazorpay() {
   const orders = new Map();
   const payments = new Map();
-  let seq = 1000;
-  const api = {
-    calls: [],
-    async PGCreateOrder(req) {
-      api.calls.push(["create", req]);
-      const rec = { order_id: req.order_id, cf_order_id: String(seq++), order_status: "ACTIVE", order_amount: req.order_amount, order_currency: req.order_currency, payment_session_id: `session_${req.order_id}` };
-      orders.set(req.order_id, rec);
-      return { data: rec };
+  let sequence = 1;
+  return {
+    orders, payments, calls: [], unavailable: false, refundUncertain: false,
+    async createOrder(body) {
+      this.calls.push(["create", body]);
+      const order = { ...body, id: `order_fake${sequence++}`, amount_paid: 0, amount_due: body.amount, status: "created" };
+      orders.set(order.id, order);
+      return { ...order };
     },
-    async PGFetchOrder(id) {
-      const rec = orders.get(id);
-      if (!rec) {
-        const e = new Error("order not found");
-        e.response = { status: 404, data: { message: "order not found" } };
-        throw e;
-      }
-      return { data: { ...rec } };
+    async fetchOrder(id) {
+      if (this.unavailable) throw new Error("Provider unavailable");
+      assert.ok(orders.has(id), "Unknown provider order");
+      return { ...orders.get(id) };
     },
-    async PGOrderFetchPayments(id) {
-      return { data: payments.get(id) || [] };
-    },
-    async PGOrderCreateRefund(id, req) {
-      api.calls.push(["refund", id, req]);
-      return { data: { cf_refund_id: String(seq++), refund_status: "PENDING", refund_amount: req.refund_amount } };
-    },
-    PGVerifyWebhookSignature(signature, rawBody, timestamp) {
-      const expected = crypto.createHmac("sha256", WEBHOOK_SECRET).update(`${timestamp}${rawBody}`).digest("base64");
-      if (expected !== signature) throw new Error("Generated signature and received signature did not match.");
-      const obj = JSON.parse(rawBody);
-      return { type: obj.type, object: obj };
-    },
-    // --- test controls ---
-    markPaid(id, { amount, method = "upi" } = {}) {
-      const rec = orders.get(id);
-      rec.order_status = "PAID";
-      if (amount !== undefined) rec.order_amount = amount;
-      payments.set(id, [{ cf_payment_id: seq++, payment_status: "SUCCESS", payment_amount: rec.order_amount, payment_group: method, payment_completion_time: new Date().toISOString() }]);
-    },
-    markPartiallyCollected(id, collected) {
-      const rec = orders.get(id);
-      rec.order_status = "PAID";
-      payments.set(id, [{ cf_payment_id: seq++, payment_status: "SUCCESS", payment_amount: collected, payment_group: "upi" }]);
+    async fetchOrderPayments(id) { return { items: payments.get(id) || [] }; },
+    async createRefund(id, body) {
+      this.calls.push(["refund", id, body]);
+      if (this.refundUncertain) throw new Error("Connection reset after submission");
+      return { id: `rfnd_fake${sequence++}`, payment_id: id, amount: body.amount, status: "processed" };
     },
     markFailedAttempt(id) {
-      payments.set(id, [{ cf_payment_id: seq++, payment_status: "FAILED", payment_amount: orders.get(id).order_amount, payment_message: "Bank declined" }]);
+      const order = orders.get(id);
+      order.status = "attempted";
+      payments.set(id, [{ id: `pay_failed${sequence++}`, order_id: id, amount: order.amount, status: "failed", captured: false, error_description: "Bank declined" }]);
     },
-    markExpired(id) {
-      orders.get(id).order_status = "EXPIRED";
+    markPartiallyCollected(id, collected) {
+      this.markPaid(id, { amount: collected });
+      orders.get(id).amount_paid = collected;
+      orders.get(id).amount_due = orders.get(id).amount - collected;
     },
-    signedWebhook(body) {
-      const rawBody = JSON.stringify(body);
-      const timestamp = String(Date.now());
-      const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(`${timestamp}${rawBody}`).digest("base64");
-      return { rawBody, headers: { "content-type": "application/json", "x-webhook-signature": signature, "x-webhook-timestamp": timestamp } };
+    markPaid(id, overrides = {}) {
+      const order = orders.get(id);
+      order.status = "paid";
+      order.amount_paid = order.amount;
+      order.amount_due = 0;
+      const payment = { id: `pay_fake${sequence++}`, order_id: id, amount: order.amount, currency: order.currency, status: "captured", captured: true, method: "upi", ...overrides };
+      payments.set(id, [payment]);
+      return payment;
+    },
+    checkout(id, payment) {
+      return { razorpay_order_id: id, razorpay_payment_id: payment.id,
+        razorpay_signature: crypto.createHmac("sha256", KEY_SECRET).update(`${id}|${payment.id}`).digest("hex") };
+    },
+    webhook(id, event = "payment.captured") {
+      const raw = JSON.stringify({ event, payload: { payment: { entity: { order_id: id } } } }, null, 2);
+      return { raw, headers: { "content-type": "application/json", "x-razorpay-signature": crypto.createHmac("sha256", WEBHOOK_SECRET).update(raw).digest("hex") } };
     },
   };
-  return api;
 }
 
-async function startTestServer(extraEnv = {}) {
+async function startTestServer(extraEnv = {}, overrides = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "crestus-test-"));
   const env = {
     NODE_ENV: "test",
@@ -87,15 +79,16 @@ async function startTestServer(extraEnv = {}) {
     FULFILLMENT_WORKER_ENABLED: "false",
     FULFILLMENT_BASE_BACKOFF_MS: "10",
     FRONTEND_URL: "https://crestuseccommerce.store",
-    CASHFREE_APP_ID: "test",
-    CASHFREE_SECRET_KEY: "test",
+    RAZORPAY_KEY_ID: "rzp_test_fake",
+    RAZORPAY_KEY_SECRET: KEY_SECRET,
+    RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET,
     ...extraEnv,
   };
   const config = loadConfig(env);
-  const cashfree = createFakeCashfree();
+  const razorpay = createFakeRazorpay();
   const shiprocket = createShiprocketClient({ config, store: null });
   const quiet = { info() {}, warn() {}, error() {}, log() {} };
-  const { app, services } = createApp({ config, cashfree, shiprocket, logger: quiet, processOnPaid: true });
+  const { app, services } = createApp({ config, razorpay, shiprocket, logger: quiet, processOnPaid: true, ...overrides });
   const server = await new Promise((resolve) => {
     const s = app.listen(0, () => resolve(s));
   });
@@ -125,7 +118,7 @@ async function startTestServer(extraEnv = {}) {
     fs.rmSync(dataDir, { recursive: true, force: true });
   };
 
-  return { request, services, cashfree, shiprocket, close, base };
+  return { request, services, razorpay, shiprocket, close, base };
 }
 
 const USER_A = { uid: "uid-a", email: "alice@crestus.test" };
@@ -134,4 +127,4 @@ const ADMIN = { uid: "uid-admin", email: "admin@crestus.test" };
 
 const ADDRESS = { name: "Alice Sharma", email: USER_A.email, phone: "9876543210", line1: "12 Marine Drive, Flat 4B", city: "Mumbai", state: "Maharashtra", pincode: "400001" };
 
-module.exports = { startTestServer, createFakeCashfree, USER_A, USER_B, ADMIN, ADDRESS };
+module.exports = { startTestServer, createFakeRazorpay, USER_A, USER_B, ADMIN, ADDRESS };

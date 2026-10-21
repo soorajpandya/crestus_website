@@ -33,6 +33,20 @@ test('order pagination reaches beyond 500 rows and clamps invalid page inputs', 
   assert.equal(orderPage(orders, { page: 999 }).page, 25);
 });
 
+test('refund reporting includes processed Razorpay refunds and preserves recorded legacy successes', () => {
+  const result = overview([
+    order('razorpay', { payment: { gateway: 'razorpay', status: 'partially_refunded', amount_paid: 500, refunds: [
+      { amount: 12.34, status: 'PROCESSED' },
+      { amount: 20, status: 'PENDING' },
+      { amount: 30, status: 'UNKNOWN' },
+      { amount: 40, status: 'FAILED' },
+      { amount: 50, status: 'SUBMITTING' },
+    ] } }),
+    order('legacy', { payment: { status: 'partially_refunded', amount_paid: 500, refunds: [{ amount: 10, status: 'SUCCESS' }] } }),
+  ], [], new Date('2026-10-21T08:00:00Z'));
+  assert.equal(result.successful_refunds, 22.34);
+});
+
 test('admin reports, search, scopes and configuration require admin access', async () => {
   const server = await startTestServer();
   try {
