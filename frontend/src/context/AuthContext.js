@@ -80,13 +80,7 @@ export function AuthProvider({ children }) {
     }).catch((err) => {
       console.warn("[Auth] Could not send welcome email:", err.message);
     });
-    // Account creation succeeds even if delivery of the verification email fails.
-    try {
-      await verifyEmail();
-      toast.success("Account created. Check your inbox to verify your email.");
-    } catch {
-      toast.success("Account created. You can resend the verification email from My Orders.");
-    }
+    toast.success("Account created successfully. Welcome to Crestus!");
     return newUser;
   };
 
