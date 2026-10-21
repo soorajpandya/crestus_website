@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Truck, ShieldCheck, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import api from "../lib/api";
 import { track } from "../lib/firebase";
@@ -106,6 +106,42 @@ export default function ProductDetail() {
           >
             Add to bag — {inr(product.price)}
           </button>
+
+          {/* Estimated Delivery & Perks */}
+          <div data-testid="estimated-delivery-info" className="mt-8 pt-8 border-t border-zinc-200/80 max-w-md">
+            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-50 border border-zinc-200/70">
+              <div className="p-2.5 rounded-xl bg-white text-zinc-900 border border-zinc-200/60 shadow-sm shrink-0">
+                <Truck size={20} className="text-brand-magenta" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                    Estimated Delivery
+                  </p>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Standard
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-zinc-700 mt-1">
+                  <span className="font-bold text-ink">8 – 12 Business Days</span> (Pan-India)
+                </p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Dispatched in 1–2 business days with live tracking
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-4 pt-1">
+              <div className="flex items-center gap-2 text-xs text-zinc-600">
+                <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+                <span className="font-medium">100% Original Quality</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-zinc-600">
+                <RotateCcw size={16} className="text-zinc-600 shrink-0" />
+                <span className="font-medium">7-Day Easy Returns</span>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
