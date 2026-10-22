@@ -4,6 +4,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail, sendEmailVerification,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -31,6 +32,7 @@ export const createEmailAccount = (email, password) => createUserWithEmailAndPas
 export const resetEmailPassword = (email) => sendPasswordResetEmail(auth, email.trim());
 export const verifyEmail = () => sendEmailVerification(auth.currentUser);
 export const logOut = () => signOut(auth);
+export { getAdditionalUserInfo };
 
 let analytics = null;
 if (typeof window !== "undefined") {

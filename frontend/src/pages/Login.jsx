@@ -70,7 +70,7 @@ export default function Login({ signup = false, admin = false }) {
       if (resetting) {
         const recipient = email.trim();
         await resetPassword(recipient);
-        setNotice(`If an account uses ${recipient}, you'll receive a password reset link from noreply@crestus-6f962.firebaseapp.com. The subject may say “Reset your password for project-854907499926”. Allow a few minutes and check your spam folder.`);
+        setNotice(`If an account exists for ${recipient}, a password reset link has been sent. Please check your inbox and spam folder.`);
       } else {
         await (signup ? signupWithEmail(email, password) : loginWithEmail(email, password));
         navigate(redirectUrl, { replace: true });

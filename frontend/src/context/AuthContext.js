@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { onIdTokenChanged, reload } from "firebase/auth";
 import {
   auth, signInWithGoogle, signInWithEmail, createEmailAccount,
-  resetEmailPassword, verifyEmail, logOut,
+  resetEmailPassword, verifyEmail, logOut, getAdditionalUserInfo,
 } from "../lib/firebase";
 import api from "../lib/api";
 import { toast } from "sonner";
@@ -49,14 +49,18 @@ export function AuthProvider({ children }) {
 
   const login = async () => {
     try {
-      const { user: signedInUser } = await signInWithGoogle();
+      const result = await signInWithGoogle();
+      const signedInUser = result.user;
       toast.success(`Welcome, ${signedInUser.displayName || "back"}!`);
       // Trigger welcome email if this is a first-time Google sign-up
-      if (signedInUser.metadata?.creationTime === signedInUser.metadata?.lastSignInTime) {
+      const isNewUser = Boolean(getAdditionalUserInfo(result)?.isNewUser) || (signedInUser.metadata?.creationTime === signedInUser.metadata?.lastSignInTime);
+      if (isNewUser) {
         api.post("/auth/welcome-email", {
           email: signedInUser.email,
           name: signedInUser.displayName || signedInUser.email.split("@")[0],
-        }).catch(() => {});
+        }).catch((err) => {
+          console.warn("[Auth] Could not send welcome email:", err.message);
+        });
       }
       return signedInUser;
     } catch (error) {
