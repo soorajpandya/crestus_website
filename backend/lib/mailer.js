@@ -12,11 +12,15 @@ async function getTransporter() {
 
   if (host && user && pass) {
     // Real SMTP configuration (Hostinger, Gmail, SendGrid, etc.)
+    const port = Number(process.env.SMTP_PORT || 587);
     cachedTransporter = nodemailer.createTransport({
       host,
-      port: Number(process.env.SMTP_PORT || 465),
-      secure: Number(process.env.SMTP_PORT || 465) === 465,
+      port,
+      secure: port === 465,
       auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
     isEthereal = false;
     return cachedTransporter;
