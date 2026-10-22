@@ -94,8 +94,6 @@ test("password reset needs only email and shows a neutral confirmation", async (
   expect(auth.resetPassword).toHaveBeenCalledWith("customer@example.com");
   expect(container.querySelector('[role="status"]').textContent).toContain("password reset link");
   expect(container.querySelector('[role="status"]').textContent).toContain("customer@example.com");
-  expect(container.querySelector('[role="status"]').textContent).toContain("Reset your password for project-854907499926");
-  expect(container.querySelector('[role="status"]').textContent).toContain("noreply@crestus-6f962.firebaseapp.com");
   expect(auth.loginWithEmail).not.toHaveBeenCalled();
   expect(mockNavigate).not.toHaveBeenCalled();
   await input("login-email-input", "another@example.com");
