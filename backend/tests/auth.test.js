@@ -35,7 +35,7 @@ test("real token middleware excludes unverified email from order queries and adm
   t.mock.method(admin.auth(), "verifyIdToken", async (token) => ({
     uid: "email-signup", email: "admin@example.com", email_verified: token === "verified",
   }));
-  const { app, services } = createApp({ config, auth: firebaseAuth, cashfree: {}, shiprocket: {} });
+  const { app, services } = createApp({ config, auth: firebaseAuth, razorpay: {}, shiprocket: {} });
   let query;
   services.store.listOrdersForUser = async (args) => { query = args; return []; };
   const server = await new Promise((resolve) => { const s = app.listen(0, "127.0.0.1", () => resolve(s)); });

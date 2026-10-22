@@ -7,7 +7,7 @@ function importedOrder() {
   const doc=createOrderDocument({orderId:'ord_cf_test',customer:{name:'Test',email:USER_A.email,phone:'0000000000'},address:null,items:[],totals:{currency:'INR',total:100,shipping:null},pkg:null,pickupLocation:null,shippingQuote:null,cartKeys:[]});
   doc.record_kind='historical_wallet_deposit';doc.import_metadata={side_effects_disabled:true,ownership_verified:false,recognize_revenue:false};
   doc.source='cashfree_transaction_report_csv';doc.created_at=null;doc.user_id=null;
-  doc.payment={...doc.payment,status:'paid',cashfree_order_id:'source_test',amount_paid:100,confirmed_via:'historical_csv_import'};
+  doc.payment={...doc.payment,gateway:'cashfree',status:'paid',cashfree_order_id:'source_test',amount_paid:100,confirmed_via:'historical_csv_import'};
   doc.fulfillment.status='not_applicable';return doc;
 }
 test('admin reads imported null-field records; matching email confers no ownership or public access',async()=>{
@@ -25,14 +25,14 @@ test('import blocks payment, retry, refunds, fulfillment and tracking even when 
   const t=await startTestServer();
   try {
     const doc=importedOrder();doc.fulfillment={...doc.fulfillment,status:'queued',due:true};await t.services.store.putOrder(doc);
-    t.cashfree.PGFetchOrder=async()=>{assert.fail('Historical record must not call provider');};
+    t.razorpay.fetchOrder=async()=>{assert.fail('Historical record must not call provider');};
     const result=await t.services.payments.confirmPayment(doc.order_id,{source:'webhook'});assert.equal(result.changed,false);assert.equal(result.historical_import,true);
     await t.services.fulfillment.processOrder(doc.order_id);
     for(const route of ['payment/verify','fulfillment/retry','fulfillment/cancel','refund','tracking/refresh']) {
       const r=await t.request('POST',`/api/admin/orders/${doc.order_id}/${route}`,{user:ADMIN,body:{}});assert.equal(r.status,409,route);
     }
     for(const op of [()=>t.services.payments.retryPayment(doc.order_id),()=>t.services.payments.createRefund(doc.order_id,{}),()=>t.services.payments.createPaymentSession(doc),()=>t.services.fulfillment.retryStage(doc.order_id),()=>t.services.tracking.refreshFromProvider(doc)])await assert.rejects(op(),e=>e.status===409);
-    assert.deepEqual(t.cashfree.calls,[]);
+    assert.deepEqual(t.razorpay.calls,[]);
     await t.services.store.updateOrder(doc.order_id,o=>({...o,payment:{...o.payment,status:'pending'}}));
     await t.services.payments.reconcilePendingPayments();
     assert.equal((await t.services.store.getOrder(doc.order_id)).payment.status,'pending');
