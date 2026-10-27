@@ -108,6 +108,7 @@ async function sendWelcomeEmail({ email, name = "Member" }) {
           <hr style="border: none; border-top: 1px solid #27272a; margin: 30px 0 20px 0;" />
           <p style="font-size: 11px; color: #52525b; line-height: 1.6; margin: 0;">
             This email was sent to ${email} because an account was registered on Crestus.<br>
+            804 Krupal Pathshala, Shivranjani Char Rasta, Jodhpur Char Rasta, Ahmedabad, Ahmadabad City, Gujarat, India - 380009<br>
             © 2026 Crestus Ecommerce Private Limited. All rights reserved.
           </p>
         </div>
