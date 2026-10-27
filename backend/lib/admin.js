@@ -2,12 +2,12 @@ const { isHistoricalImport } = require('./historicalImport');
 
 const money = (value) => Math.round(value * 100) / 100;
 const amount = (order) => Number(order.payment?.amount_paid) || 0;
-const refunded = (order) => (order.payment?.refunds || []).filter(r => r.status === 'SUCCESS').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+const refunded = (order) => (order.payment?.refunds || []).filter(r => ['PROCESSED', 'SUCCESS'].includes(r.status)).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
 // A small projection keeps import provenance, payment attempts and provider responses out of reports.
 const ORDER_SUMMARY_FIELDS = ['order_id', 'user_id', 'customer', 'created_at', 'imported_at', 'record_kind',
   'import_metadata.side_effects_disabled', 'totals.total', 'payment.status', 'payment.amount_paid',
-  'payment.refunds', 'payment.cashfree_order_id', 'payment.observed_success_transaction_time',
+  'payment.refunds', 'payment.cashfree_order_id', 'payment.gateway', 'payment.razorpay_order_id', 'payment.razorpay_payment_id', 'payment.observed_success_transaction_time',
   'fulfillment.status', 'tracking.active', 'tracking.status', 'shipment.awb_code'];
 
 function orderTime(order) {
@@ -123,7 +123,7 @@ function filterOrders(orders, query) {
     if (query.scope === 'historical' && !isHistoricalImport(o)) return false;
     if (query.payment_status && o.payment?.status !== query.payment_status) return false;
     if (query.fulfillment_status && o.fulfillment?.status !== query.fulfillment_status) return false;
-    return !search || [o.order_id, o.customer?.name, o.customer?.email, o.customer?.phone, o.shipment?.awb_code, o.payment?.cashfree_order_id].some(value => String(value || '').toLowerCase().includes(search));
+    return !search || [o.order_id, o.customer?.name, o.customer?.email, o.customer?.phone, o.shipment?.awb_code, o.payment?.cashfree_order_id, o.payment?.razorpay_order_id, o.payment?.razorpay_payment_id].some(value => String(value || '').toLowerCase().includes(search));
   }).sort((a, b) => orderTime(b).localeCompare(orderTime(a)));
   return matches;
 }

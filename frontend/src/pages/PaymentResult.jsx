@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Clock, XCircle, RefreshCw } from "lucide-react";
 import api, { apiErrorMessage } from "../lib/api";
 import { track } from "../lib/firebase";
-import { openCashfreeCheckout } from "../lib/cashfree";
+import { openPaymentCheckout } from "../lib/paymentCheckout";
 import { inr, useOrder } from "../lib/orderUi";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -72,7 +72,7 @@ export function PaymentPending() {
         const { data } = await api.post(`/orders/${orderId}/verify`);
         if (!active) return;
         if (data.paid) return navigate(`/success?order_id=${encodeURIComponent(orderId)}`, { replace: true });
-        // A stale "failed" from an earlier attempt can precede Cashfree flipping to PAID; give it a few polls.
+        // An earlier failed attempt can precede the gateway confirming payment; give it a few polls.
         if (data.payment_status === "expired" || (data.payment_status === "failed" && attempts.current >= 3)) {
           return navigate(`/failed?order_id=${encodeURIComponent(orderId)}`, { replace: true });
         }
@@ -237,11 +237,11 @@ export function PaymentFailed() {
   const retry = async () => {
     setRetrying(true);
     try {
-      // Backend re-checks Cashfree first; an already-paid order is never charged again.
+      // Backend re-checks the order's gateway first; an already-paid order is never charged again.
       const { data } = await api.post(`/orders/${orderId}/retry-payment`);
       if (data.paid) return navigate(`/success?order_id=${encodeURIComponent(orderId)}`, { replace: true });
-      const result = await openCashfreeCheckout({ paymentSessionId: data.payment_session_id, environment: data.environment });
-      if (result?.error && !result?.redirect && !result?.paymentDetails) {
+      const result = await openPaymentCheckout(data);
+      if (result?.error) {
         toast.error(result.error.message || "Payment was not completed");
         await refresh();
         return;
@@ -269,7 +269,7 @@ export function PaymentFailed() {
       icon={isPending ? Clock : XCircle}
       tone={isPending ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}
       title={isPending ? "Payment not completed" : order.payment.status === "expired" ? "Payment expired" : "Payment failed"}
-      subtitle={order.payment.last_failure_reason || "No money was captured for this order. You can retry the payment — your bag and address are saved."}
+      subtitle={!order.payment.can_retry ? "This order uses a retired payment gateway. Contact support to confirm its payment status." : order.payment.last_failure_reason || "Payment hasn't been confirmed for this order. You can retry — your bag and address are saved."}
     >
       <div className="space-y-6">
         <div className="rounded-2xl border border-zinc-200 p-5 flex flex-wrap items-center justify-between gap-3">
@@ -287,9 +287,9 @@ export function PaymentFailed() {
           <OrderItems items={order.items} />
         </div>
         <div className="flex flex-wrap gap-3 justify-center pt-2">
-          <button data-testid="retry-payment" onClick={retry} disabled={retrying} className="inline-flex items-center gap-2 bg-brand-magenta text-white px-8 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-darkorange transition-colors disabled:opacity-60">
+          {order.payment.can_retry && <button data-testid="retry-payment" onClick={retry} disabled={retrying} className="inline-flex items-center gap-2 bg-brand-magenta text-white px-8 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-darkorange transition-colors disabled:opacity-60">
             <RefreshCw size={14} className={retrying ? "animate-spin" : ""} /> {retrying ? "Starting…" : `Retry payment · ${inr(order.totals.total)}`}
-          </button>
+          </button>}
           <Link to="/orders" className="border border-zinc-300 px-6 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:border-ink transition-colors">
             My orders
           </Link>

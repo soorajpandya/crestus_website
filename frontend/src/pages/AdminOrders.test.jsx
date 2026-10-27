@@ -13,7 +13,7 @@ jest.mock('react-router-dom', () => ({
 
 const sample = extra => ({
   order_id: 'order-1', customer: { name: 'Customer' }, totals: { total: 500 },
-  payment: { status: 'paid', amount_paid: 500, refunds: [] },
+  payment: { gateway: 'razorpay', status: 'paid', amount_paid: 500, refunds: [] },
   fulfillment: { status: 'needs_attention', last_error: { stage: 'create_order', code: 'PROVIDER_ERROR', message: '{"message":"Pickup location is unavailable"}', data: { status_code: 422, message: 'Pickup location is unavailable' } } },
   shipment: {}, tracking: { events: [] }, items: [], customer_fulfillment_status: 'preparing', ...extra,
 });
@@ -57,6 +57,18 @@ test('a failed order detail request can be retried successfully', async () => {
   await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Try again').click());
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(container.querySelector('[aria-label="Order status"]')).not.toBeNull();
+});
+
+test('retired gateway records retain identifiers with all payment actions disabled', async () => {
+  api.get.mockResolvedValue({ data: sample({ payment: { gateway: 'cashfree', status: 'paid', amount_paid: 500, cashfree_order_id: 'original-provider-order', cf_payment_id: 'original-payment', refunds: [] } }) });
+  await act(async () => root.render(<AdminOrderDetail />));
+  expect(container.textContent).toContain('original-provider-order');
+  expect(container.textContent).toContain('original-payment');
+  expect(container.textContent).toContain('gateway has been retired');
+  const actions = [...container.querySelectorAll('button')].filter(button => /Re-verify|Refund/.test(button.textContent));
+  expect(actions).toHaveLength(2);
+  expect(actions.every(button => button.disabled)).toBe(true);
+  expect(api.post).not.toHaveBeenCalled();
 });
 
 test('fulfillment history renders nested provider JSON as readable text', async () => {

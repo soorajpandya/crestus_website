@@ -59,17 +59,17 @@ export default function OrderDetail() {
       {order.payment.status === "pending" && (
         <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
           <span>This order hasn't been paid yet.</span>
-          <Link to={`/failed?order_id=${encodeURIComponent(order.order_id)}`} className="bg-ink text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors">
+          {order.payment.can_retry ? <Link to={`/failed?order_id=${encodeURIComponent(order.order_id)}`} className="bg-ink text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors">
             Complete payment
-          </Link>
+          </Link> : <span>Contact support to confirm payment on this older order.</span>}
         </div>
       )}
       {["failed", "expired"].includes(order.payment.status) && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 flex flex-wrap items-center justify-between gap-3">
           <span>{order.payment.last_failure_reason || "Payment was not completed."}</span>
-          <Link to={`/failed?order_id=${encodeURIComponent(order.order_id)}`} className="bg-ink text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors">
+          {order.payment.can_retry ? <Link to={`/failed?order_id=${encodeURIComponent(order.order_id)}`} className="bg-ink text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-magenta transition-colors">
             Retry payment
-          </Link>
+          </Link> : <span>Contact support to confirm payment on this older order.</span>}
         </div>
       )}
 

@@ -9,6 +9,7 @@ const { createAuth } = require("./lib/auth");
 const { createShiprocketClient } = require("./lib/shiprocket");
 const { createShippingService } = require("./lib/shipping");
 const { createPaymentService } = require("./lib/payments");
+const { createRazorpayClient } = require("./lib/razorpay");
 const { createTrackingService } = require("./lib/tracking");
 const { createFulfillmentService } = require("./lib/fulfillment");
 const pricing = require("./lib/pricing");
@@ -37,12 +38,6 @@ function createApp(overrides = {}) {
   const store = overrides.store || createStore(config);
   const auth = overrides.auth || createAuth(config);
 
-  let cashfree = overrides.cashfree;
-  if (!cashfree) {
-    const { Cashfree, CFEnvironment } = require("cashfree-pg");
-    cashfree = new Cashfree(config.cashfree.sandbox ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION, config.cashfree.appId, config.cashfree.secretKey);
-  }
-
   const shiprocket = overrides.shiprocket || createShiprocketClient({ config, store, logger });
   const shipping = createShippingService({ config, shiprocket, logger });
   const tracking = createTrackingService({ config, store, shiprocket, logger });
@@ -50,7 +45,7 @@ function createApp(overrides = {}) {
   const payments = createPaymentService({
     config,
     store,
-    cashfree,
+    razorpay: overrides.razorpay || createRazorpayClient({ config }),
     logger,
     // Kick the worker immediately; the persisted job guarantees pickup even if this call is lost.
     onPaid: async (order) => {
@@ -58,7 +53,7 @@ function createApp(overrides = {}) {
     },
   });
   fulfillment = createFulfillmentService({ config, store, shiprocket, shipping, tracking, payments, logger });
-  const services = { config, store, auth, cashfree, shiprocket, shipping, tracking, fulfillment, payments, products, packagingRules };
+  const services = { config, store, auth, shiprocket, shipping, tracking, fulfillment, payments, products, packagingRules };
 
   const app = express();
   app.set("trust proxy", 1);
@@ -114,7 +109,7 @@ function createApp(overrides = {}) {
   );
 
   const health = (_req, res) =>
-    res.json({ status: "ok", service: "crestus-api", gateway: "cashfree", mode: config.cashfree.sandbox ? "sandbox" : "production", store: store.driver, shiprocket: shiprocket.enabled ? (shiprocket.mock ? "mock" : "live") : "disabled" });
+    res.json({ status: "ok", service: "crestus-api", gateway: payments.gateway, mode: payments.environment, store: store.driver, shiprocket: shiprocket.enabled ? (shiprocket.mock ? "mock" : "live") : "disabled" });
   app.get(["/", "/health", "/api/health"], health);
 
   // ---- catalogue ----------------------------------------------------------
@@ -222,6 +217,7 @@ function createApp(overrides = {}) {
     "/api/orders/create",
     auth.requireAuth,
     asyncRoute(async (req, res) => {
+      if (!payments.configured) return res.status(503).json({ detail: "Payments are temporarily unavailable. Please try again later." });
       const address = pricing.validateAddress(req.body?.address);
       if (req.user.email && address.email !== req.user.email) {
         // Order email must match the signed-in account so ownership checks stay unambiguous.
@@ -248,15 +244,18 @@ function createApp(overrides = {}) {
       try {
         session = await payments.createPaymentSession(order);
       } catch (err) {
-        logger.error("[Cashfree] create order failed:", err.response?.data || err.message);
+        logger.error(`[${payments.gateway}] create order failed:`, err.message);
         await store.updateOrder(order.order_id, (o) => ({ ...o, payment: { ...o.payment, last_failure_reason: "Could not initialise payment" } }));
-        return res.status(502).json({ detail: err.response?.data?.message || "Could not start payment. Please try again.", order_id: order.order_id });
+        return res.status(502).json({ detail: "Could not start payment. Please try again.", order_id: order.order_id });
       }
       res.json({
         order_id: order.order_id,
-        cashfree_order_id: session.cashfree_order_id,
-        cf_order_id: session.cf_order_id,
-        payment_session_id: session.payment_session_id,
+        gateway: "razorpay",
+        key_id: session.key_id,
+        razorpay_order_id: session.razorpay_order_id,
+        amount_minor: session.amount_minor,
+        currency: session.currency,
+        prefill: session.prefill,
         amount: totals.total,
         totals,
         environment: session.environment,
@@ -265,7 +264,7 @@ function createApp(overrides = {}) {
   );
 
   // ---- customer orders ----------------------------------------------------
-  // Cashfree substitutes its own order id into return_url; retries carry a "-rN" suffix that maps back to one internal order.
+  // Customer routes always use the internal Crestus order ID.
   const normaliseOrderParam = (req, _res, next, value) => {
     req.params.order_id = payments.internalOrderIdFrom(value);
     next();
@@ -315,7 +314,8 @@ function createApp(overrides = {}) {
     const orderId = payments.internalOrderIdFrom(req.params.order_id || req.body?.order_id);
     const order = orderId ? await store.getOrder(orderId) : null;
     if (!order || (!auth.ownsOrder(req.user, order) && !req.user.is_admin)) return res.status(404).json({ detail: "Order not found" });
-    const result = await payments.confirmPayment(orderId, { source: "return_page" });
+    const hasCheckout = ["razorpay_order_id", "razorpay_payment_id", "razorpay_signature"].some(key => Object.hasOwn(req.body || {}, key));
+    const result = await payments.confirmPayment(orderId, { source: "return_page", checkout: hasCheckout ? req.body : undefined });
     res.json({ order_id: orderId, paid: result.paid, payment_status: result.order.payment.status, order: toCustomerView(result.order) });
   });
   app.post("/api/orders/:order_id/verify", auth.requireAuth, verifyHandler);
@@ -329,24 +329,22 @@ function createApp(overrides = {}) {
       if (!order) return;
       const result = await payments.retryPayment(order.order_id);
       if (result.paid) return res.json({ paid: true, order: toCustomerView(result.order) });
-      res.json({ paid: false, order_id: order.order_id, payment_session_id: result.payment_session_id, cashfree_order_id: result.cashfree_order_id, environment: result.environment, amount: order.totals.total });
+      res.json({ paid: false, order_id: order.order_id, gateway: "razorpay", key_id: result.key_id,
+        razorpay_order_id: result.razorpay_order_id, amount_minor: result.amount_minor, currency: result.currency, prefill: result.prefill,
+        environment: result.environment, amount: order.totals.total });
     })
   );
 
   // ---- webhooks -----------------------------------------------------------
-  const cashfreeWebhook = asyncRoute(async (req, res) => {
+  app.post("/api/webhooks/razorpay", asyncRoute(async (req, res) => {
     try {
       const result = await payments.handleWebhook({ rawBody: req.rawBody, headers: req.headers });
       res.json({ status: "ok", ...result });
-    } catch (err) {
-      if (err.status === 401 || err.status === 400) {
-        logger.warn("[Cashfree Webhook] rejected:", err.message);
-        return res.status(err.status).json({ detail: err.message });
-      }
-      throw err;
+    } catch (error) {
+      if ([400, 401, 503].includes(error.status)) return res.status(error.status).json({ detail: error.message });
+      throw error;
     }
-  });
-  app.post(["/webhook", "/api/webhooks/cashfree"], cashfreeWebhook);
+  }));
 
   // ---- admin --------------------------------------------------------------
   const admin = express.Router();
@@ -383,7 +381,8 @@ function createApp(overrides = {}) {
     admin_url: 'https://admin.crestuseccommerce.store',
     authentication: auth.enabled ? 'configured' : 'not_configured',
     order_store: store.driver,
-    payments: config.cashfree.appId && config.cashfree.secretKey ? (config.cashfree.sandbox ? 'sandbox' : 'production') : 'not_configured',
+    payment_gateway: payments.gateway,
+    payments: payments.configured ? payments.environment : 'not_configured',
     shipping: shiprocket.enabled ? (shiprocket.mock ? 'mock' : 'live') : 'disabled',
   }));
   admin.get(

@@ -46,7 +46,7 @@ test("order is persisted before payment and client-supplied amounts are ignored"
   try {
     const created = await placeOrder(t, CHEAP_ITEMS);
     assert.equal(created.amount, DRESS_PRICE);
-    assert.ok(created.payment_session_id);
+    assert.ok(created.razorpay_order_id);
     const stored = await t.services.store.getOrder(created.order_id);
     assert.equal(stored.payment.status, "pending");
     assert.equal(stored.totals.total, DRESS_PRICE);
@@ -55,9 +55,9 @@ test("order is persisted before payment and client-supplied amounts are ignored"
     assert.equal(stored.shipping_address.pincode, "400001");
     assert.equal(stored.package.weight_kg, 0.5);
     assert.equal(stored.pickup_location, "Primary");
-    assert.equal(t.cashfree.calls[0][1].order_amount, DRESS_PRICE);
-    assert.equal(t.cashfree.calls[0][1].order_note, require("../products.json").find((p) => p.id === "w-midnight-slip").name);
-    assert.match(t.cashfree.calls[0][1].order_meta.return_url, /^https:\/\/crestuseccommerce\.store\/pending\?order_id=/);
+    assert.equal(t.razorpay.calls[0][1].amount, DRESS_PRICE * 100);
+    assert.equal(t.razorpay.calls[0][1].notes.products, require("../products.json").find((p) => p.id === "w-midnight-slip").name);
+    assert.equal(t.razorpay.calls[0][1].notes.internal_order_id, created.order_id);
     assert.equal(t.shiprocket.behaviour.calls.filter((c) => c.name === "createAdhocOrder").length, 0);
   } finally {
     await t.close();
@@ -68,7 +68,7 @@ test("full payment creates exactly one Shiprocket order and books the shipment e
   const t = await startTestServer();
   try {
     const created = await placeOrder(t);
-    t.cashfree.markPaid(created.cashfree_order_id);
+    t.razorpay.markPaid(created.razorpay_order_id);
     const verify = await t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A });
     assert.equal(verify.status, 200);
     assert.equal(verify.data.paid, true);
@@ -76,7 +76,7 @@ test("full payment creates exactly one Shiprocket order and books the shipment e
     const order = await t.services.store.getOrder(created.order_id);
     assert.equal(order.payment.status, "paid");
     assert.equal(order.payment.amount_paid, DRESS_PRICE);
-    assert.ok(order.payment.cf_payment_id);
+    assert.ok(order.payment.razorpay_payment_id);
     assert.equal(order.fulfillment.status, "completed");
     assert.equal(order.fulfillment.stage, "done");
     assert.ok(order.shipment.sr_order_id);
@@ -118,38 +118,38 @@ test("failed, pending, forged, mismatched and partial payments never create ship
   try {
     const srCreates = () => t.shiprocket.behaviour.calls.filter((c) => c.name === "createAdhocOrder").length;
 
-    // pending (ACTIVE) + failed attempt
+    // pending (attempted) + failed attempt
     const pending = await placeOrder(t);
-    t.cashfree.markFailedAttempt(pending.cashfree_order_id);
+    t.razorpay.markFailedAttempt(pending.razorpay_order_id);
     const v1 = await t.request("POST", `/api/orders/${pending.order_id}/verify`, { user: USER_A });
     assert.equal(v1.data.paid, false);
     assert.equal(srCreates(), 0);
 
     // webhook saying failed
-    const failedHook = t.cashfree.signedWebhook({ type: "PAYMENT_FAILED_WEBHOOK", data: { order: { order_id: pending.cashfree_order_id }, payment: { payment_status: "FAILED", payment_message: "Bank declined" } } });
-    const fh = await t.request("POST", "/api/webhooks/cashfree", { raw: failedHook.rawBody, headers: failedHook.headers });
+    const failedHook = t.razorpay.webhook(pending.razorpay_order_id, "payment.failed");
+    const fh = await t.request("POST", "/api/webhooks/razorpay", { raw: failedHook.raw, headers: failedHook.headers });
     assert.equal(fh.status, 200);
     const afterFail = await t.services.store.getOrder(pending.order_id);
-    assert.equal(afterFail.payment.status, "failed");
-    assert.equal(afterFail.payment.last_failure_reason, "Bank declined");
+    assert.equal(afterFail.payment.status, "pending");
+    assert.equal(afterFail.payment.last_failure_reason, null);
     assert.equal(afterFail.fulfillment.status, "not_started");
 
     // forged webhook claiming PAID
-    const forged = JSON.stringify({ type: "PAYMENT_SUCCESS_WEBHOOK", data: { order: { order_id: pending.cashfree_order_id, order_status: "PAID" } } });
-    const forgedRes = await t.request("POST", "/webhook", { raw: forged, headers: { "content-type": "application/json", "x-webhook-signature": "bogus", "x-webhook-timestamp": "1" } });
+    const forged = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { order_id: pending.razorpay_order_id } } } });
+    const forgedRes = await t.request("POST", "/api/webhooks/razorpay", { raw: forged, headers: { "content-type": "application/json", "x-razorpay-signature": "bogus" } });
     assert.equal(forgedRes.status, 401);
-    assert.equal((await t.services.store.getOrder(pending.order_id)).payment.status, "failed");
+    assert.equal((await t.services.store.getOrder(pending.order_id)).payment.status, "pending");
 
-    // genuine webhook claiming success, but Cashfree API says still ACTIVE → not paid
-    const liar = t.cashfree.signedWebhook({ type: "PAYMENT_SUCCESS_WEBHOOK", data: { order: { order_id: pending.cashfree_order_id, order_status: "PAID" } } });
-    const liarRes = await t.request("POST", "/webhook", { raw: liar.rawBody, headers: liar.headers });
+    // genuine webhook claiming success, but Razorpay API says still attempted → not paid
+    const liar = t.razorpay.webhook(pending.razorpay_order_id);
+    const liarRes = await t.request("POST", "/api/webhooks/razorpay", { raw: liar.raw, headers: liar.headers });
     assert.equal(liarRes.status, 200);
     assert.equal(liarRes.data.paid, false);
     assert.equal(srCreates(), 0);
 
-    // amount mismatch: Cashfree order shows PAID but for a different amount
+    // amount mismatch: Razorpay order shows paid but for a different amount
     const mismatch = await placeOrder(t);
-    t.cashfree.markPaid(mismatch.cashfree_order_id, { amount: 10 });
+    t.razorpay.markPaid(mismatch.razorpay_order_id, { amount: 10 });
     const v2 = await t.request("POST", `/api/orders/${mismatch.order_id}/verify`, { user: USER_A });
     assert.equal(v2.data.paid, false);
     const mm = await t.services.store.getOrder(mismatch.order_id);
@@ -159,16 +159,16 @@ test("failed, pending, forged, mismatched and partial payments never create ship
 
     // partial collection
     const partial = await placeOrder(t);
-    t.cashfree.markPartiallyCollected(partial.cashfree_order_id, 1000);
+    t.razorpay.markPartiallyCollected(partial.razorpay_order_id, 1000);
     const v3 = await t.request("POST", `/api/orders/${partial.order_id}/verify`, { user: USER_A });
     assert.equal(v3.data.paid, false);
     assert.equal(srCreates(), 0);
 
-    // expired
+    // Authorization alone is not a captured payment.
     const expired = await placeOrder(t);
-    t.cashfree.markExpired(expired.cashfree_order_id);
+    t.razorpay.orders.get(expired.razorpay_order_id).status = "attempted";
     const v4 = await t.request("POST", `/api/orders/${expired.order_id}/verify`, { user: USER_A });
-    assert.equal(v4.data.payment_status, "expired");
+    assert.equal(v4.data.payment_status, "pending");
     assert.equal(srCreates(), 0);
   } finally {
     await t.close();
@@ -179,12 +179,12 @@ test("duplicate webhooks and concurrent confirmations do not duplicate fulfillme
   const t = await startTestServer();
   try {
     const created = await placeOrder(t);
-    t.cashfree.markPaid(created.cashfree_order_id);
-    const hook = t.cashfree.signedWebhook({ type: "PAYMENT_SUCCESS_WEBHOOK", data: { order: { order_id: created.cashfree_order_id, order_status: "PAID" }, payment: { payment_status: "SUCCESS" } } });
+    t.razorpay.markPaid(created.razorpay_order_id);
+    const hook = t.razorpay.webhook(created.razorpay_order_id);
 
     const results = await Promise.all([
-      t.request("POST", "/webhook", { raw: hook.rawBody, headers: hook.headers }),
-      t.request("POST", "/webhook", { raw: hook.rawBody, headers: hook.headers }),
+      t.request("POST", "/api/webhooks/razorpay", { raw: hook.raw, headers: hook.headers }),
+      t.request("POST", "/api/webhooks/razorpay", { raw: hook.raw, headers: hook.headers }),
       t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A }),
       t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A }),
       t.request("POST", "/api/orders/verify", { user: USER_A, body: { order_id: created.order_id } }),
@@ -210,9 +210,9 @@ test("browser closed: webhook alone (or reconciliation) completes payment and fu
   const t = await startTestServer();
   try {
     const a = await placeOrder(t);
-    t.cashfree.markPaid(a.cashfree_order_id);
-    const hook = t.cashfree.signedWebhook({ type: "PAYMENT_SUCCESS_WEBHOOK", data: { order: { order_id: a.cashfree_order_id } } });
-    const ack = await t.request("POST", "/webhook", { raw: hook.rawBody, headers: hook.headers });
+    t.razorpay.markPaid(a.razorpay_order_id);
+    const hook = t.razorpay.webhook(a.razorpay_order_id);
+    const ack = await t.request("POST", "/api/webhooks/razorpay", { raw: hook.raw, headers: hook.headers });
     assert.equal(ack.status, 200);
     assert.equal(ack.data.paid, true);
     // Webhook is acknowledged once payment + job are persisted; the worker finishes in the background.
@@ -220,7 +220,7 @@ test("browser closed: webhook alone (or reconciliation) completes payment and fu
     assert.equal((await t.services.store.getOrder(a.order_id)).fulfillment.status, "completed");
 
     const b = await placeOrder(t);
-    t.cashfree.markPaid(b.cashfree_order_id);
+    t.razorpay.markPaid(b.razorpay_order_id);
     await t.services.payments.reconcilePendingPayments();
     await t.services.fulfillment.processOrder(b.order_id);
     const order = await t.services.store.getOrder(b.order_id);
@@ -239,7 +239,7 @@ test("Shiprocket failure preserves payment success and resumes from the failed s
     t.shiprocket.behaviour.failStage = "assign_awb";
     t.shiprocket.behaviour.failMode = "timeout";
     const created = await placeOrder(t);
-    t.cashfree.markPaid(created.cashfree_order_id);
+    t.razorpay.markPaid(created.razorpay_order_id);
     await t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A });
 
     let order = await t.services.store.getOrder(created.order_id);
@@ -267,7 +267,7 @@ test("Shiprocket failure preserves payment success and resumes from the failed s
     t.shiprocket.behaviour.failStage = "pickup";
     t.shiprocket.behaviour.failMode = "validation";
     const second = await placeOrder(t);
-    t.cashfree.markPaid(second.cashfree_order_id);
+    t.razorpay.markPaid(second.razorpay_order_id);
     await t.request("POST", `/api/orders/${second.order_id}/verify`, { user: USER_A });
     order = await t.services.store.getOrder(second.order_id);
     assert.equal(order.fulfillment.status, "needs_attention");
@@ -295,7 +295,7 @@ test("tracking webhooks are authenticated, deduplicated and order-independent", 
   const t = await startTestServer();
   try {
     const created = await placeOrder(t);
-    t.cashfree.markPaid(created.cashfree_order_id);
+    t.razorpay.markPaid(created.razorpay_order_id);
     await t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A });
     const order = await t.services.store.getOrder(created.order_id);
     const awb = order.shipment.awb_code;
@@ -412,42 +412,37 @@ test("customers can only access their own orders; admin routes need the admin ro
   }
 });
 
-test("retry payment reuses or recreates a Cashfree session and refuses when already paid", async () => {
+test("retry reuses one Razorpay order across failed attempts and refuses when already paid", async () => {
   const t = await startTestServer();
   try {
     const created = await placeOrder(t);
-    t.cashfree.markFailedAttempt(created.cashfree_order_id);
-    const r1 = await t.request("POST", `/api/orders/${created.order_id}/retry-payment`, { user: USER_A });
+    t.razorpay.markFailedAttempt(created.razorpay_order_id);
+    const retry = () => t.request("POST", `/api/orders/${created.order_id}/retry-payment`, { user: USER_A });
+    const r1 = await retry();
     assert.equal(r1.data.paid, false);
-    assert.equal(r1.data.payment_session_id, `session_${created.cashfree_order_id}`);
-
-    t.cashfree.markExpired(created.cashfree_order_id);
-    const r2 = await t.request("POST", `/api/orders/${created.order_id}/retry-payment`, { user: USER_A });
-    assert.equal(r2.data.cashfree_order_id, `${created.order_id}-r2`);
-    assert.equal(t.cashfree.calls.filter((c) => c[0] === "create").at(-1)[1].order_amount, DRESS_PRICE);
-
-    t.cashfree.markPaid(r2.data.cashfree_order_id);
-    // Cashfree's return_url carries the suffixed id; customer routes must resolve it to the internal order.
-    const viaSuffix = await t.request("POST", `/api/orders/${r2.data.cashfree_order_id}/verify`, { user: USER_A });
-    assert.equal(viaSuffix.status, 200);
-    assert.equal(viaSuffix.data.order_id, created.order_id);
-    assert.equal(viaSuffix.data.paid, true);
-    const hook = t.cashfree.signedWebhook({ type: "PAYMENT_SUCCESS_WEBHOOK", data: { order: { order_id: r2.data.cashfree_order_id } } });
-    const hr = await t.request("POST", "/webhook", { raw: hook.rawBody, headers: hook.headers });
+    assert.equal(r1.data.razorpay_order_id, created.razorpay_order_id);
+    await t.services.store.updateOrder(created.order_id, o => ({ ...o, payment: { ...o.payment, status: "expired" } }));
+    const r2 = await retry();
+    assert.equal(r2.data.razorpay_order_id, created.razorpay_order_id);
+    assert.equal(r2.data.amount_minor, DRESS_PRICE * 100);
+    assert.equal(t.razorpay.calls.filter(c => c[0] === "create").length, 1);
+    t.razorpay.markPaid(created.razorpay_order_id);
+    const verified = await t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A });
+    assert.equal(verified.data.paid, true);
+    assert.equal((await t.request("POST", `/api/orders/${created.razorpay_order_id}/verify`, { user: USER_A })).status, 404);
+    const hook = t.razorpay.webhook(created.razorpay_order_id);
+    const hr = await t.request("POST", "/api/webhooks/razorpay", hook);
     assert.equal(hr.data.order_id, created.order_id);
-    const r3 = await t.request("POST", `/api/orders/${created.order_id}/retry-payment`, { user: USER_A });
-    assert.equal(r3.data.paid, true);
-    assert.equal(t.shiprocket.behaviour.calls.filter((c) => c.name === "createAdhocOrder").length, 1);
-  } finally {
-    await t.close();
-  }
+    assert.equal((await retry()).data.paid, true);
+    assert.equal(t.shiprocket.behaviour.calls.filter(c => c.name === "createAdhocOrder").length, 1);
+  } finally { await t.close(); }
 });
 
 test("admin can cancel a shipment and refund separately", async () => {
   const t = await startTestServer();
   try {
     const created = await placeOrder(t);
-    t.cashfree.markPaid(created.cashfree_order_id);
+    t.razorpay.markPaid(created.razorpay_order_id);
     await t.request("POST", `/api/orders/${created.order_id}/verify`, { user: USER_A });
 
     const cancel = await t.request("POST", `/api/admin/orders/${created.order_id}/fulfillment/cancel`, { user: ADMIN, body: { reason: "Customer request" } });

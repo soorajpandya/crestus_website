@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api, { apiErrorMessage } from "../lib/api";
 import { track } from "../lib/firebase";
-import { openCashfreeCheckout } from "../lib/cashfree";
+import { openPaymentCheckout } from "../lib/paymentCheckout";
 import { inr, fmtDay } from "../lib/orderUi";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -186,12 +186,8 @@ export default function Checkout() {
     try {
       // The backend snapshots the order (trusted prices, package, shipping) before any payment starts.
       const { data } = await api.post("/orders/create", { items: itemsPayload, address: cleanedAddress, cart_keys: cartKeys });
-      if (!data.payment_session_id) {
-        throw new Error(data.detail || data.message || "Failed to initialize payment session");
-      }
-
-      const result = await openCashfreeCheckout({ paymentSessionId: data.payment_session_id, environment: data.environment });
-      if (result?.error && !result?.redirect && !result?.paymentDetails) {
+      const result = await openPaymentCheckout(data);
+      if (result?.error) {
         // Modal closed or payment aborted — the order stays retrievable; the backend decides its real status.
         toast.error(result.error.message || "Payment was not completed");
         navigate(`/failed?order_id=${encodeURIComponent(data.order_id)}`);
@@ -341,7 +337,7 @@ export default function Checkout() {
             >
               {paying ? "Processing…" : quoteState === "loading" ? "Calculating…" : `Pay ${inr(payable)}`}
             </button>
-            <p className="text-[11px] text-zinc-400 text-center">Secured by Cashfree Payments · UPI, Cards, Netbanking</p>
+            <p className="text-[11px] text-zinc-400 text-center">Secured by Razorpay · UPI, Cards, Netbanking</p>
           </div>
         </div>
       </div>

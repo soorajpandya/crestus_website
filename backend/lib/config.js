@@ -47,10 +47,12 @@ function loadConfig(env = process.env) {
     // Dev-only escape hatch: trust x-dev-uid / x-dev-email headers when Firebase Admin is not configured.
     allowInsecureDevAuth: bool(env.ALLOW_INSECURE_DEV_AUTH) && env.NODE_ENV !== "production",
 
-    cashfree: {
-      appId: String(env.CASHFREE_APP_ID || "").trim(),
-      secretKey: String(env.CASHFREE_SECRET_KEY || "").trim(),
-      sandbox: String(env.CASHFREE_ENV || "").trim().toUpperCase() === "SANDBOX",
+    paymentGateway: "razorpay",
+    razorpay: {
+      keyId: String(env.RAZORPAY_KEY_ID || "").trim(),
+      keySecret: String(env.RAZORPAY_KEY_SECRET || "").trim(),
+      webhookSecret: String(env.RAZORPAY_WEBHOOK_SECRET || "").trim(),
+      timeoutMs: num(env.RAZORPAY_TIMEOUT_MS, 20000),
     },
 
     firebase: {
