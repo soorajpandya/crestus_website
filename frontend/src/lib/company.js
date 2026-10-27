@@ -4,7 +4,8 @@ export const COMPANY = {
   description:
     "CRESTUS ECCOMMERCE PRIVATE LIMITED is an online clothing retailer. The company is engaged in the retail and wholesale sale, trading and online marketing of men's and women's apparel and garments through its e-commerce platform.",
   address:
-    "804 Krupal Pathshala, Shivranjani Char Rasta, Jodhpur Char Rasta, Ahmedabad, Ahmadabad City, Gujarat, India.",
+    "804 Krupal Pathshala, Shivranjani Char Rasta, Jodhpur Char Rasta, Ahmedabad, Ahmadabad City, Gujarat, India - 380009",
+  pincode: "380009",
   email: "support@crestuseccommerce.store",
   phone: "+91 99982 46924",
   cin: "U46901GJ2026PTC177540",
